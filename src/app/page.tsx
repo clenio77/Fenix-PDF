@@ -1,12 +1,12 @@
 'use client';
 
 import { useState } from 'react';
-import FileUpload from '@/components/FileUpload';
-import FileViewer from '@/components/FileViewer';
-import FileList from '@/components/FileList';
-import Toolbox from '@/components/Toolbox';
-import { PDFDocument } from '@/lib/types';
-import { PDFService } from '@/lib/pdfService';
+import FileUpload from '../components/FileUpload';
+import FileViewer from '../components/FileViewer';
+import FileList from '../components/FileList';
+import Toolbox from '../components/Toolbox';
+import { PDFDocument } from '../lib/types';
+import { PDFService } from '../lib/pdfService';
 
 export default function Home() {
   const [documents, setDocuments] = useState<PDFDocument[]>([]);

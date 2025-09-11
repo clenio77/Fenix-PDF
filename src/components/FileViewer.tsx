@@ -2,8 +2,8 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { Document, Page, pdfjs } from 'react-pdf';
-import { PDFDocument, TextAnnotation } from '@/lib/types';
-import { PDFService } from '@/lib/pdfService';
+import { PDFDocument, TextAnnotation } from '../lib/types';
+import { PDFService } from '../lib/pdfService';
 import TextEditor from './TextEditor';
 
 // Configurar o worker do PDF.js

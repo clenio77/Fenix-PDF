@@ -1,8 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { PDFDocument } from '@/lib/types';
-import { PDFService } from '@/lib/pdfService';
+import { PDFDocument } from '../lib/types';
+import { PDFService } from '../lib/pdfService';
 
 interface FileListProps {
   documents: PDFDocument[];

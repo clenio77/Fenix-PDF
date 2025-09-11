@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { TextAnnotation } from '@/lib/types';
+import { TextAnnotation } from '../lib/types';
 
 interface TextEditorProps {
   annotation: TextAnnotation;
