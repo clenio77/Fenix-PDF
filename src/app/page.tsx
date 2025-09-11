@@ -20,14 +20,47 @@ export default function Home() {
   };
 
   const handleSaveAndDownload = async () => {
-    if (documents.length === 0) return;
+    if (documents.length === 0) {
+      alert('Nenhum documento carregado para unir.');
+      return;
+    }
     
     try {
+      // Mostrar loading
+      const loadingMessage = document.createElement('div');
+      loadingMessage.innerHTML = `
+        <div style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); 
+                    background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+                    z-index: 9999; text-align: center;">
+          <div style="margin-bottom: 10px;">
+            <div style="width: 40px; height: 40px; border: 4px solid #f3f3f3; border-top: 4px solid #3498db; 
+                        border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto;"></div>
+          </div>
+          <p style="margin: 0; color: #333;">Unindo PDFs...</p>
+        </div>
+        <style>
+          @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        </style>
+      `;
+      document.body.appendChild(loadingMessage);
+      
       const blob = await PDFService.generatePDF(documents);
-      PDFService.downloadPDF(blob, 'documento-compilado.pdf');
+      
+      // Remover loading
+      document.body.removeChild(loadingMessage);
+      
+      // Gerar nome do arquivo baseado na data
+      const now = new Date();
+      const timestamp = now.toISOString().slice(0, 19).replace(/:/g, '-');
+      const filename = `documentos-unidos-${timestamp}.pdf`;
+      
+      PDFService.downloadPDF(blob, filename);
+      
+      // Mostrar sucesso
+      alert(`PDF gerado com sucesso! ${documents.length} documento(s) unido(s) em "${filename}"`);
     } catch (error) {
       console.error('Erro ao gerar PDF:', error);
-      alert('Erro ao gerar PDF. Tente novamente.');
+      alert('Erro ao gerar PDF. Verifique se os arquivos estão válidos e tente novamente.');
     }
   };
 
@@ -83,10 +116,33 @@ export default function Home() {
                   <svg className="w-4 h-4 mr-2 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                   </svg>
-                  Ações
+                  Unir PDFs
                 </h3>
               </div>
               <div className="card-body space-y-4">
+                {/* Informações sobre o merge */}
+                {documents.length > 0 && (
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                    <div className="flex items-center mb-2">
+                      <svg className="w-4 h-4 text-blue-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      <span className="text-sm font-medium text-blue-800">Documentos para Unir</span>
+                    </div>
+                    <div className="text-xs text-blue-700 space-y-1">
+                      {documents.map((doc, index) => (
+                        <div key={doc.id} className="flex justify-between">
+                          <span className="truncate">{doc.name}</span>
+                          <span>({doc.pages.length} páginas)</span>
+                        </div>
+                      ))}
+                      <div className="border-t border-blue-200 pt-1 mt-2 font-medium">
+                        Total: {documents.reduce((sum, doc) => sum + doc.pages.length, 0)} páginas
+                      </div>
+                    </div>
+                  </div>
+                )}
+                
                 <button 
                   onClick={handleSaveAndDownload}
                   className="btn w-full flex items-center justify-center"
@@ -95,8 +151,23 @@ export default function Home() {
                   <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                   </svg>
-                  Salvar e Baixar
+                  {documents.length === 0 ? 'Nenhum documento' : `Unir ${documents.length} PDF(s)`}
                 </button>
+                
+                {documents.length === 0 && (
+                  <div className="text-xs text-gray-500 text-center space-y-2">
+                    <p>Carregue PDFs para poder uni-los</p>
+                    <div className="bg-gray-50 border border-gray-200 rounded p-2 text-left">
+                      <p className="font-medium mb-1">Como usar:</p>
+                      <ul className="space-y-1 text-xs">
+                        <li>• Faça upload de múltiplos PDFs</li>
+                        <li>• Reordene as páginas se necessário</li>
+                        <li>• Adicione anotações de texto</li>
+                        <li>• Clique em "Unir PDFs" para baixar</li>
+                      </ul>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </aside>

@@ -22,6 +22,7 @@ export default function FileViewer({ documents, currentTool, selectedPageIndex, 
   const [currentDocument, setCurrentDocument] = useState<PDFDocument | null>(null);
   const [editingAnnotation, setEditingAnnotation] = useState<TextAnnotation | null>(null);
   const [isAddingText, setIsAddingText] = useState(false);
+  const [newAnnotationCoords, setNewAnnotationCoords] = useState<{x: number, y: number, screenX: number, screenY: number} | null>(null);
   const viewerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -116,20 +117,20 @@ export default function FileViewer({ documents, currentTool, selectedPageIndex, 
           ))}
 
           {/* Editor de texto para adicionar nova anotação */}
-          {isAddingText && (
+          {isAddingText && newAnnotationCoords && (
             <div
-              className="absolute"
+              className="absolute z-10"
               style={{
-                left: `${(isAddingText ? 100 : 0) / currentPageData.width * 600}px`,
-                top: `${(isAddingText ? 100 : 0) / currentPageData.height * 600}px`
+                left: `${newAnnotationCoords.screenX}px`,
+                top: `${newAnnotationCoords.screenY}px`
               }}
             >
               <TextEditor
                 annotation={{
                   id: 'new-annotation',
                   content: '',
-                  x: 100,
-                  y: 100,
+                  x: newAnnotationCoords.x,
+                  y: newAnnotationCoords.y,
                   width: 200,
                   height: 30,
                   fontSize: 12,
@@ -137,8 +138,14 @@ export default function FileViewer({ documents, currentTool, selectedPageIndex, 
                   color: '#000000'
                 }}
                 onSave={handleAddAnnotation}
-                onCancel={() => setIsAddingText(false)}
-                onDelete={() => setIsAddingText(false)}
+                onCancel={() => {
+                  setIsAddingText(false);
+                  setNewAnnotationCoords(null);
+                }}
+                onDelete={() => {
+                  setIsAddingText(false);
+                  setNewAnnotationCoords(null);
+                }}
               />
             </div>
           )}
@@ -173,15 +180,15 @@ export default function FileViewer({ documents, currentTool, selectedPageIndex, 
   };
 
   const handleAddAnnotation = (annotation: TextAnnotation) => {
-    if (!currentDocument) return;
+    if (!currentDocument || !newAnnotationCoords) return;
 
     const currentPageIndex = currentPage - 1;
     const updatedDocument = PDFService.addTextAnnotation(
       currentDocument,
       currentPageIndex,
       annotation.content,
-      annotation.x,
-      annotation.y,
+      newAnnotationCoords.x,
+      newAnnotationCoords.y,
       {
         width: annotation.width,
         height: annotation.height,
@@ -197,6 +204,7 @@ export default function FileViewer({ documents, currentTool, selectedPageIndex, 
 
     onDocumentsUpdate(updatedDocuments);
     setIsAddingText(false);
+    setNewAnnotationCoords(null);
   };
 
   const handleUpdateAnnotation = (updatedAnnotation: TextAnnotation) => {
@@ -239,6 +247,9 @@ export default function FileViewer({ documents, currentTool, selectedPageIndex, 
   // Função para lidar com cliques na página para adicionar texto
   const handlePageClick = (e: React.MouseEvent<HTMLDivElement>) => {
     if (currentTool === 'text' && !isAddingText && !editingAnnotation) {
+      e.preventDefault();
+      e.stopPropagation();
+      
       const rect = e.currentTarget.getBoundingClientRect();
       const x = e.clientX - rect.left;
       const y = e.clientY - rect.top;
@@ -249,6 +260,8 @@ export default function FileViewer({ documents, currentTool, selectedPageIndex, 
         const pdfX = (x / 600) * currentPageData.width;
         const pdfY = (y / 600) * currentPageData.height;
         
+        // Armazenar as coordenadas para usar no TextEditor
+        setNewAnnotationCoords({ x: pdfX, y: pdfY, screenX: x, screenY: y });
         setIsAddingText(true);
       }
     }

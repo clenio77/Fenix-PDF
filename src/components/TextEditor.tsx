@@ -24,6 +24,21 @@ export default function TextEditor({ annotation, onSave, onCancel, onDelete }: T
     }
   }, []);
 
+  // Fechar editor quando clicar fora
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (!target.closest('.text-editor-container')) {
+        onCancel();
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [onCancel]);
+
   const handleSave = () => {
     const updatedAnnotation: TextAnnotation = {
       ...annotation,
@@ -44,7 +59,7 @@ export default function TextEditor({ annotation, onSave, onCancel, onDelete }: T
   };
 
   return (
-    <div className="absolute bg-white border-2 border-blue-500 rounded-lg shadow-lg p-2 min-w-[200px]">
+    <div className="text-editor-container absolute bg-white border-2 border-blue-500 rounded-lg shadow-lg p-2 min-w-[200px] z-50">
       <div className="flex flex-col space-y-2">
         {/* Controles de formatação */}
         <div className="flex space-x-2 text-xs">

@@ -11,14 +11,19 @@ export default function Footer() {
             {/* Logo e Descrição */}
             <div className="md:col-span-2">
               <div className="flex items-center space-x-3 mb-4">
-                <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center">
-                  <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                  </svg>
+                <div className="w-16 h-16 flex items-center justify-center">
+                  <img 
+                    src="/images/logoclenio.svg" 
+                    alt="Clênio Consultory AI" 
+                    className="w-full h-full object-contain"
+                  />
                 </div>
-                <h3 className="text-lg font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-                  Fênix PDF
-                </h3>
+                <div>
+                  <h3 className="text-lg font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+                    Fênix PDF
+                  </h3>
+                  <p className="text-sm text-gray-600">Powered by Clênio Consultory AI</p>
+                </div>
               </div>
               <p className="text-gray-600 text-sm leading-relaxed mb-4">
                 Ferramenta interna desenvolvida para simplificar e centralizar a manipulação de documentos PDF. 
@@ -96,10 +101,8 @@ export default function Footer() {
                 © {currentYear} Fênix PDF. Todos os direitos reservados.
               </div>
               <div className="flex items-center space-x-4 text-sm text-gray-500">
-                <span>Desenvolvido com</span>
-                <svg className="w-4 h-4 text-red-500" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clipRule="evenodd" />
-                </svg>
+                <span>Desenvolvido por</span>
+                <span className="font-semibold text-blue-600">Clênio Consultory AI</span>
                 <span>para Correios</span>
               </div>
             </div>

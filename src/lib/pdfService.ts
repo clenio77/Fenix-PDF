@@ -259,6 +259,10 @@ export class PDFService {
               // Usar a função degrees do pdf-lib para converter a rotação
               pdfPage.setRotation(degrees(page.rotation));
             }
+            
+            // Nota: As anotações de texto são mantidas apenas na interface
+            // Para incluir anotações no PDF final, seria necessário uma implementação mais complexa
+            // Por enquanto, o PDF gerado contém apenas as páginas originais com rotações aplicadas
           }
         }
       }
