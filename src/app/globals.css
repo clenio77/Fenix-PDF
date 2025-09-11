@@ -1,0 +1,59 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --foreground-rgb: 0, 0, 0;
+  --background-rgb: 255, 255, 255;
+}
+
+body {
+  color: rgb(var(--foreground-rgb));
+  background: rgb(var(--background-rgb));
+}
+
+@layer components {
+  .btn {
+    @apply px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed;
+  }
+  
+  .btn-danger {
+    @apply px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors;
+  }
+  
+  .toolbox-btn {
+    @apply border border-gray-300 rounded hover:bg-gray-100 transition-colors cursor-pointer;
+  }
+  
+  .toolbox-btn:disabled {
+    @apply opacity-50 cursor-not-allowed;
+  }
+  
+  /* Estilos para react-pdf */
+  .react-pdf__Page {
+    margin: 0 auto;
+  }
+  
+  .react-pdf__Page__canvas {
+    border-radius: 8px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  }
+  
+  /* Estilos para anotações */
+  .annotation-text {
+    @apply border border-blue-300 bg-blue-50 bg-opacity-50 rounded p-1 cursor-pointer transition-all;
+  }
+  
+  .annotation-text:hover {
+    @apply bg-blue-100 border-blue-400;
+  }
+  
+  /* Estilos para drag and drop */
+  .dragging {
+    @apply opacity-50 transform rotate-2;
+  }
+  
+  .drop-target {
+    @apply border-blue-400 bg-blue-50;
+  }
+}
