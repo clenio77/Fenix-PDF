@@ -83,9 +83,9 @@ export default function FileUpload({ onFilesUploaded }: FileUploadProps) {
         onClick={handleButtonClick}
       >
         <div className="flex flex-col items-center">
-          <div className="w-16 h-16 bg-gradient-to-r from-blue-100 to-indigo-100 rounded-2xl flex items-center justify-center mb-4">
+          <div className="w-12 h-12 bg-gradient-to-r from-blue-100 to-indigo-100 rounded-xl flex items-center justify-center mb-3">
             <svg
-              className="w-8 h-8 text-blue-600"
+              className="w-6 h-6 text-blue-600"
               stroke="currentColor"
               fill="none"
               viewBox="0 0 24 24"
@@ -98,10 +98,10 @@ export default function FileUpload({ onFilesUploaded }: FileUploadProps) {
               />
             </svg>
           </div>
-          <h4 className="text-lg font-semibold text-gray-800 mb-2">
+          <h4 className="text-base font-semibold text-gray-800 mb-2">
             Upload de PDFs
           </h4>
-          <p className="text-sm text-gray-600 mb-4">
+          <p className="text-sm text-gray-600 mb-3">
             Clique para selecionar ou arraste arquivos PDF aqui
           </p>
           <div className="flex items-center text-xs text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
