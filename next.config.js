@@ -34,6 +34,13 @@ const nextConfig = {
         process: require.resolve('process/browser'),
         crypto: require.resolve('crypto-browserify'),
         buffer: require.resolve('buffer'),
+        canvas: false, // Desabilitar canvas no cliente
+      };
+      
+      // Ignorar canvas completamente no cliente
+      config.resolve.alias = {
+        ...config.resolve.alias,
+        canvas: false,
       };
     }
     return config;

@@ -25,22 +25,6 @@ export default function TextEditor({ annotation, onSave, onCancel, onDelete, cur
     }
   }, []);
 
-  // Fechar editor quando clicar fora
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      const target = event.target as HTMLElement;
-      if (!target.closest('.text-editor-container')) {
-        // Salvar automaticamente ao clicar fora
-        handleSave();
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [handleSave]);
-
   const handleSave = () => {
     const updatedAnnotation: TextAnnotation = {
       ...annotation,
@@ -63,6 +47,22 @@ export default function TextEditor({ annotation, onSave, onCancel, onDelete, cur
       onCancel();
     }
   };
+
+  // Fechar editor quando clicar fora
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (!target.closest('.text-editor-container')) {
+        // Salvar automaticamente ao clicar fora
+        handleSave();
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [handleSave]);
 
   return (
     <div className="text-editor-container absolute bg-white border-2 border-blue-500 rounded-lg shadow-lg p-2 min-w-[200px] z-50">
