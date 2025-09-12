@@ -35,22 +35,27 @@ export default function FileViewer({ documents, currentTool, selectedPageIndex, 
 
   // Função para corrigir renderização do texto
   const fixTextRendering = () => {
-    const textLayer = document.querySelector('.react-pdf__Page__textContent');
-    if (textLayer) {
-      const spans = textLayer.querySelectorAll('span');
-      spans.forEach((span, index) => {
-        const element = span as HTMLElement;
-        element.style.position = 'absolute';
-        element.style.zIndex = `${index + 1}`;
-        element.style.pointerEvents = 'auto';
-        element.style.cursor = 'text';
-        element.style.color = 'transparent';
-        element.style.opacity = '1';
-        
-        if (element.style.transform) {
-          element.style.transformOrigin = '0% 0%';
-        }
-      });
+    try {
+      const textLayer = document.querySelector('.react-pdf__Page__textContent');
+      if (textLayer) {
+        const spans = textLayer.querySelectorAll('span');
+        spans.forEach((span, index) => {
+          const element = span as HTMLElement;
+          element.style.position = 'absolute';
+          element.style.zIndex = `${index + 1}`;
+          element.style.pointerEvents = 'auto';
+          element.style.cursor = 'text';
+          element.style.color = 'transparent';
+          element.style.opacity = '1';
+          
+          if (element.style.transform) {
+            element.style.transformOrigin = '0% 0%';
+          }
+        });
+        console.log(`Corrigidos ${spans.length} elementos de texto`);
+      }
+    } catch (error) {
+      console.error('Erro ao corrigir renderização do texto:', error);
     }
   };
 
@@ -152,7 +157,6 @@ export default function FileViewer({ documents, currentTool, selectedPageIndex, 
               width={Math.min(600 * zoom, window.innerWidth * 0.6)}
               renderTextLayer={true}
               renderAnnotationLayer={false}
-              textLayerMode={1}
               scale={zoom}
               onLoadSuccess={(page) => {
                 console.log('Página carregada com sucesso:', page);
