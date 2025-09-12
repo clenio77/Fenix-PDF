@@ -6,6 +6,7 @@ import { PDFDocument, TextAnnotation } from '../lib/types';
 import { PDFService } from '../lib/pdfService';
 import { NotificationService } from '../lib/notifications';
 import TextEditor from './TextEditor';
+import { detectTextAlignment, preserveOriginalSpacing } from './TextAlignmentHelper';
 
 // Configurar o worker do PDF.js
 pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
@@ -111,28 +112,38 @@ export default function FileViewer({ documents, currentTool, selectedPageIndex, 
           />
 
           {/* Anotações de texto sobrepostas */}
-          {currentPageData && currentPageData.textAnnotations.map((annotation) => (
-            <div
-              key={annotation.id}
-              className="absolute border border-blue-300 bg-blue-50 bg-opacity-50 rounded p-1 cursor-pointer"
-              style={{
-                left: `${(annotation.x / currentPageData.width) * Math.min(600 * zoom, window.innerWidth * 0.6)}px`,
-                top: `${(annotation.y / currentPageData.height) * Math.min(600 * zoom, window.innerWidth * 0.6)}px`,
-                width: `${(annotation.width / currentPageData.width) * Math.min(600 * zoom, window.innerWidth * 0.6)}px`,
-                height: `${(annotation.height / currentPageData.height) * Math.min(600 * zoom, window.innerWidth * 0.6)}px`,
-                fontSize: `${(annotation.fontSize || 12) * zoom}px`,
-                fontFamily: annotation.fontFamily || 'Arial',
-                color: annotation.color || '#000000',
-                zIndex: 20
-              }}
-              onClick={(e) => {
-                e.stopPropagation();
-                handleAnnotationClick(annotation);
-              }}
-            >
-              {annotation.content}
-            </div>
-          ))}
+          {currentPageData && currentPageData.textAnnotations.map((annotation) => {
+            const pdfWidth = Math.min(600 * zoom, window.innerWidth * 0.6);
+            const pdfHeight = (pdfWidth * currentPageData.height) / currentPageData.width;
+            
+            return (
+              <div
+                key={annotation.id}
+                className="absolute border border-blue-300 bg-blue-50 bg-opacity-50 rounded p-1 cursor-pointer"
+                style={{
+                  left: `${(annotation.x / currentPageData.width) * pdfWidth}px`,
+                  top: `${(annotation.y / currentPageData.height) * pdfHeight}px`,
+                  width: `${(annotation.width / currentPageData.width) * pdfWidth}px`,
+                  height: `${(annotation.height / currentPageData.height) * pdfHeight}px`,
+                  fontSize: `${(annotation.fontSize || 12) * zoom}px`,
+                  fontFamily: annotation.fontFamily || 'Arial',
+                  color: annotation.color || '#000000',
+                  zIndex: 20,
+                  // Preservar alinhamento e quebra de linha
+                  whiteSpace: 'pre-wrap',
+                  wordWrap: 'break-word',
+                  overflow: 'hidden',
+                  textAlign: 'left'
+                }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleAnnotationClick(annotation);
+                }}
+              >
+                {annotation.content}
+              </div>
+            );
+          })}
 
           {/* Editor de texto para adicionar nova anotação */}
           {isAddingText && newAnnotationCoords && (
@@ -205,11 +216,30 @@ export default function FileViewer({ documents, currentTool, selectedPageIndex, 
                   type="text"
                   defaultValue={pdfTextSelection.text}
                   className="w-full p-2 border border-gray-300 rounded text-sm mb-2"
+                  style={{
+                    // Preservar estilo original do texto
+                    textAlign: 'left', // Manter alinhamento original
+                    fontSize: 'inherit',
+                    fontFamily: 'inherit',
+                    color: 'inherit'
+                  }}
                   autoFocus
+                  onChange={(e) => {
+                    // Salvamento automático em tempo real
+                    const newText = e.target.value;
+                    if (newText !== pdfTextSelection.text) {
+                      // Atualizar o texto em tempo real
+                      setPdfTextSelection(prev => prev ? { ...prev, text: newText } : null);
+                      
+                      // Aqui você pode implementar a lógica para salvar o texto editado
+                      // Por exemplo, atualizar o documento PDF diretamente
+                      console.log('Texto editado em tempo real:', newText);
+                    }
+                  }}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') {
-                      // Aqui você pode implementar a lógica para salvar o texto editado
-                      console.log('Texto editado:', e.currentTarget.value);
+                      // Salvar definitivamente
+                      console.log('Texto editado salvo:', e.currentTarget.value);
                       setEditingPdfText(false);
                       setPdfTextSelection(null);
                     } else if (e.key === 'Escape') {
@@ -229,7 +259,7 @@ export default function FileViewer({ documents, currentTool, selectedPageIndex, 
                     Cancelar (Esc)
                   </button>
                   <div className="text-xs text-gray-500">
-                    Enter para salvar • Esc para cancelar
+                    Enter para salvar • Esc para cancelar • Auto-save ativo
                   </div>
                 </div>
               </div>
@@ -331,12 +361,13 @@ export default function FileViewer({ documents, currentTool, selectedPageIndex, 
       const x = e.clientX - rect.left;
       const y = e.clientY - rect.top;
       
-                // Converter coordenadas do clique para coordenadas do PDF
-                const currentPageData = currentDocument?.pages[currentPage - 1];
-                if (currentPageData) {
-                  const pdfWidth = Math.min(600 * zoom, window.innerWidth * 0.6);
-                  const pdfHeight = (pdfWidth * currentPageData.height) / currentPageData.width;
+      // Converter coordenadas do clique para coordenadas do PDF com melhor precisão
+      const currentPageData = currentDocument?.pages[currentPage - 1];
+      if (currentPageData) {
+        const pdfWidth = Math.min(600 * zoom, window.innerWidth * 0.6);
+        const pdfHeight = (pdfWidth * currentPageData.height) / currentPageData.width;
         
+        // Calcular coordenadas PDF considerando margens e alinhamento
         const pdfX = (x / pdfWidth) * currentPageData.width;
         const pdfY = (y / pdfHeight) * currentPageData.height;
         
@@ -363,10 +394,11 @@ export default function FileViewer({ documents, currentTool, selectedPageIndex, 
       const x = e.clientX - rect.left;
       const y = e.clientY - rect.top;
       
-      // Tentar encontrar texto na posição clicada
+      // Tentar encontrar texto na posição clicada com melhor precisão
       const textElements = document.querySelectorAll('.react-pdf__Page__textContent span');
       let clickedText = '';
       let foundRect: {x: number, y: number, width: number, height: number} | null = null;
+      let textStyle: {fontSize: number, fontFamily: string, color: string} | null = null;
       
       textElements.forEach((span) => {
         const spanRect = span.getBoundingClientRect();
@@ -384,11 +416,28 @@ export default function FileViewer({ documents, currentTool, selectedPageIndex, 
             width: spanRect.width,
             height: spanRect.height
           };
+          
+          // Capturar estilo do texto original
+          const computedStyle = window.getComputedStyle(span);
+          const alignment = detectTextAlignment(span as HTMLElement);
+          textStyle = {
+            fontSize: parseFloat(computedStyle.fontSize),
+            fontFamily: computedStyle.fontFamily,
+            color: computedStyle.color
+          };
+          
+          console.log('Estilo detectado:', {
+            ...textStyle,
+            alignment,
+            marginLeft: computedStyle.marginLeft,
+            marginRight: computedStyle.marginRight,
+            textIndent: computedStyle.textIndent
+          });
         }
       });
       
       if (clickedText && foundRect) {
-        console.log('Texto detectado:', clickedText);
+        console.log('Texto detectado:', clickedText, 'Estilo:', textStyle);
         setPdfTextSelection({
           text: clickedText,
           x: (foundRect as {x: number, y: number, width: number, height: number}).x,

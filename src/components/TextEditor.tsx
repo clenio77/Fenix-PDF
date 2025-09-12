@@ -16,13 +16,48 @@ export default function TextEditor({ annotation, onSave, onCancel, onDelete, cur
   const [fontSize, setFontSize] = useState(annotation.fontSize || 12);
   const [fontFamily, setFontFamily] = useState(annotation.fontFamily || 'Arial');
   const [color, setColor] = useState(annotation.color || '#000000');
+  const [isAutoSaving, setIsAutoSaving] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const autoSaveTimeoutRef = useRef<number | null>(null);
 
   useEffect(() => {
     if (textareaRef.current) {
       textareaRef.current.focus();
       textareaRef.current.select();
     }
+  }, []);
+
+  // Função para salvamento automático
+  const triggerAutoSave = () => {
+    if (autoSaveTimeoutRef.current) {
+      clearTimeout(autoSaveTimeoutRef.current);
+    }
+    
+    autoSaveTimeoutRef.current = window.setTimeout(() => {
+      setIsAutoSaving(true);
+      const updatedAnnotation: TextAnnotation = {
+        ...annotation,
+        content,
+        fontSize,
+        fontFamily,
+        color
+      };
+      onSave(updatedAnnotation);
+      
+      // Simular delay de salvamento
+      window.setTimeout(() => {
+        setIsAutoSaving(false);
+      }, 500);
+    }, 1000); // Salvar após 1 segundo de inatividade
+  };
+
+  // Cleanup do timeout ao desmontar
+  useEffect(() => {
+    return () => {
+      if (autoSaveTimeoutRef.current) {
+        clearTimeout(autoSaveTimeoutRef.current);
+      }
+    };
   }, []);
 
   // Fechar editor quando clicar fora
@@ -103,7 +138,10 @@ export default function TextEditor({ annotation, onSave, onCancel, onDelete, cur
         <textarea
           ref={textareaRef}
           value={content}
-          onChange={(e) => setContent(e.target.value)}
+          onChange={(e) => {
+            setContent(e.target.value);
+            triggerAutoSave(); // Disparar salvamento automático
+          }}
           onKeyDown={handleKeyDown}
           className="w-full p-2 border border-gray-300 rounded text-sm resize-none"
           style={{
@@ -143,8 +181,14 @@ export default function TextEditor({ annotation, onSave, onCancel, onDelete, cur
           </button>
         </div>
 
-        {/* Dica de uso */}
+        {/* Dica de uso e status de salvamento */}
         <div className="text-xs text-gray-500 text-center">
+          {isAutoSaving ? (
+            <span className="text-blue-600">💾 Salvando...</span>
+          ) : (
+            <span className="text-green-600">✓ Auto-save ativo</span>
+          )}
+          <br />
           Ctrl+Enter para salvar • Esc para cancelar
         </div>
       </div>

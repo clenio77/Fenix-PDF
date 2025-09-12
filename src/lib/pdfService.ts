@@ -80,15 +80,23 @@ export class PDFService {
       const updatedPages = [...updatedDocument.pages];
       const page = { ...updatedPages[pageIndex] };
       
+      // Calcular dimensões baseadas no texto e fonte
+      const fontSize = options.fontSize || 12;
+      const fontFamily = options.fontFamily || 'Arial';
+      
+      // Estimar largura baseada no texto (aproximação)
+      const estimatedWidth = Math.max(text.length * fontSize * 0.6, 100);
+      const estimatedHeight = Math.max(fontSize * 1.2, 20);
+      
       const annotation: TextAnnotation = {
         id: `annotation-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
         content: text,
-        x,
-        y,
-        width: options.width || 200,
-        height: options.height || 30,
-        fontSize: options.fontSize || 12,
-        fontFamily: options.fontFamily || 'Arial',
+        x: Math.max(0, x), // Garantir que não seja negativo
+        y: Math.max(0, y), // Garantir que não seja negativo
+        width: options.width || estimatedWidth,
+        height: options.height || estimatedHeight,
+        fontSize,
+        fontFamily,
         color: options.color || '#000000'
       };
       
@@ -319,6 +327,71 @@ export class PDFService {
         </text>
       </svg>
     `)}`;
+  }
+
+  /**
+   * Extrai texto de uma página do PDF preservando posicionamento e estilo
+   */
+  static async extractTextWithStyle(
+    document: PDFDocumentType,
+    pageIndex: number
+  ): Promise<Array<{
+    text: string;
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+    fontSize: number;
+    fontFamily: string;
+    color: string;
+  }>> {
+    // Esta funcionalidade seria implementada com pdf.js para extrair texto com metadados
+    // Por enquanto, retorna um array vazio
+    return [];
+  }
+
+  /**
+   * Aplica texto extraído como anotações preservando o estilo original
+   */
+  static applyExtractedTextAsAnnotations(
+    document: PDFDocumentType,
+    pageIndex: number,
+    extractedText: Array<{
+      text: string;
+      x: number;
+      y: number;
+      width: number;
+      height: number;
+      fontSize: number;
+      fontFamily: string;
+      color: string;
+    }>
+  ): PDFDocumentType {
+    const updatedDocument = { ...document };
+    
+    if (pageIndex >= 0 && pageIndex < updatedDocument.pages.length) {
+      const updatedPages = [...updatedDocument.pages];
+      const page = { ...updatedPages[pageIndex] };
+      
+      // Converter texto extraído em anotações
+      const annotations: TextAnnotation[] = extractedText.map((item, index) => ({
+        id: `extracted-${Date.now()}-${index}`,
+        content: item.text,
+        x: item.x,
+        y: item.y,
+        width: item.width,
+        height: item.height,
+        fontSize: item.fontSize,
+        fontFamily: item.fontFamily,
+        color: item.color
+      }));
+      
+      page.textAnnotations = [...page.textAnnotations, ...annotations];
+      updatedPages[pageIndex] = page;
+      updatedDocument.pages = updatedPages;
+    }
+    
+    return updatedDocument;
   }
 
   /**
