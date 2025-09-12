@@ -81,7 +81,7 @@ export default function FileViewer({ documents, currentTool, selectedPageIndex, 
 
     return (
       <div className="flex flex-col items-center p-4">
-        <div className="relative bg-white shadow-lg rounded-lg overflow-hidden max-w-full">
+        <div className="relative bg-white shadow-lg rounded-lg overflow-visible max-w-full">
           {/* Renderização do PDF usando react-pdf */}
           <Document
             file={currentDocument.file}
@@ -94,7 +94,7 @@ export default function FileViewer({ documents, currentTool, selectedPageIndex, 
           >
             <Page
               pageNumber={currentPage}
-              width={Math.min(500 * zoom, window.innerWidth * 0.4)}
+              width={Math.min(600 * zoom, window.innerWidth * 0.6)}
               renderTextLayer={true}
               renderAnnotationLayer={false}
             />
@@ -116,10 +116,10 @@ export default function FileViewer({ documents, currentTool, selectedPageIndex, 
               key={annotation.id}
               className="absolute border border-blue-300 bg-blue-50 bg-opacity-50 rounded p-1 cursor-pointer"
               style={{
-                left: `${(annotation.x / currentPageData.width) * Math.min(500 * zoom, window.innerWidth * 0.4)}px`,
-                top: `${(annotation.y / currentPageData.height) * Math.min(500 * zoom, window.innerWidth * 0.4)}px`,
-                width: `${(annotation.width / currentPageData.width) * Math.min(500 * zoom, window.innerWidth * 0.4)}px`,
-                height: `${(annotation.height / currentPageData.height) * Math.min(500 * zoom, window.innerWidth * 0.4)}px`,
+                left: `${(annotation.x / currentPageData.width) * Math.min(600 * zoom, window.innerWidth * 0.6)}px`,
+                top: `${(annotation.y / currentPageData.height) * Math.min(600 * zoom, window.innerWidth * 0.6)}px`,
+                width: `${(annotation.width / currentPageData.width) * Math.min(600 * zoom, window.innerWidth * 0.6)}px`,
+                height: `${(annotation.height / currentPageData.height) * Math.min(600 * zoom, window.innerWidth * 0.6)}px`,
                 fontSize: `${(annotation.fontSize || 12) * zoom}px`,
                 fontFamily: annotation.fontFamily || 'Arial',
                 color: annotation.color || '#000000',
@@ -174,8 +174,8 @@ export default function FileViewer({ documents, currentTool, selectedPageIndex, 
             <div
               className="absolute"
               style={{
-                left: `${(editingAnnotation.x / currentPageData.width) * Math.min(500 * zoom, window.innerWidth * 0.4)}px`,
-                top: `${(editingAnnotation.y / currentPageData.height) * Math.min(500 * zoom, window.innerWidth * 0.4)}px`
+                left: `${(editingAnnotation.x / currentPageData.width) * Math.min(600 * zoom, window.innerWidth * 0.6)}px`,
+                top: `${(editingAnnotation.y / currentPageData.height) * Math.min(600 * zoom, window.innerWidth * 0.6)}px`
               }}
             >
               <TextEditor
@@ -334,7 +334,7 @@ export default function FileViewer({ documents, currentTool, selectedPageIndex, 
                 // Converter coordenadas do clique para coordenadas do PDF
                 const currentPageData = currentDocument?.pages[currentPage - 1];
                 if (currentPageData) {
-                  const pdfWidth = Math.min(500 * zoom, window.innerWidth * 0.4);
+                  const pdfWidth = Math.min(600 * zoom, window.innerWidth * 0.6);
                   const pdfHeight = (pdfWidth * currentPageData.height) / currentPageData.width;
         
         const pdfX = (x / pdfWidth) * currentPageData.width;

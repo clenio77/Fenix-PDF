@@ -80,9 +80,9 @@ export default function Home() {
           />
         </div>
         
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 sm:gap-6 lg:gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 sm:gap-6 lg:gap-8">
           {/* Sidebar - Responsiva */}
-          <aside className="lg:col-span-1 space-y-4 sm:space-y-6">
+          <aside className="lg:col-span-2 space-y-4 sm:space-y-6">
             {/* Upload Card */}
             <div className="card fade-in-up">
               <div className="card-header">
