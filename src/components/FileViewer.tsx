@@ -93,7 +93,7 @@ export default function FileViewer({ documents, currentTool, selectedPageIndex, 
           >
             <Page
               pageNumber={currentPage}
-              width={Math.min(800 * zoom, window.innerWidth * 0.7)}
+              width={Math.min(500 * zoom, window.innerWidth * 0.4)}
               renderTextLayer={true}
               renderAnnotationLayer={false}
             />
@@ -115,10 +115,10 @@ export default function FileViewer({ documents, currentTool, selectedPageIndex, 
               key={annotation.id}
               className="absolute border border-blue-300 bg-blue-50 bg-opacity-50 rounded p-1 cursor-pointer"
               style={{
-                left: `${(annotation.x / currentPageData.width) * Math.min(800 * zoom, window.innerWidth * 0.7)}px`,
-                top: `${(annotation.y / currentPageData.height) * Math.min(800 * zoom, window.innerWidth * 0.7)}px`,
-                width: `${(annotation.width / currentPageData.width) * Math.min(800 * zoom, window.innerWidth * 0.7)}px`,
-                height: `${(annotation.height / currentPageData.height) * Math.min(800 * zoom, window.innerWidth * 0.7)}px`,
+                left: `${(annotation.x / currentPageData.width) * Math.min(500 * zoom, window.innerWidth * 0.4)}px`,
+                top: `${(annotation.y / currentPageData.height) * Math.min(500 * zoom, window.innerWidth * 0.4)}px`,
+                width: `${(annotation.width / currentPageData.width) * Math.min(500 * zoom, window.innerWidth * 0.4)}px`,
+                height: `${(annotation.height / currentPageData.height) * Math.min(500 * zoom, window.innerWidth * 0.4)}px`,
                 fontSize: `${(annotation.fontSize || 12) * zoom}px`,
                 fontFamily: annotation.fontFamily || 'Arial',
                 color: annotation.color || '#000000',
@@ -173,8 +173,8 @@ export default function FileViewer({ documents, currentTool, selectedPageIndex, 
             <div
               className="absolute"
               style={{
-                left: `${(editingAnnotation.x / currentPageData.width) * Math.min(800 * zoom, window.innerWidth * 0.7)}px`,
-                top: `${(editingAnnotation.y / currentPageData.height) * Math.min(800 * zoom, window.innerWidth * 0.7)}px`
+                left: `${(editingAnnotation.x / currentPageData.width) * Math.min(500 * zoom, window.innerWidth * 0.4)}px`,
+                top: `${(editingAnnotation.y / currentPageData.height) * Math.min(500 * zoom, window.innerWidth * 0.4)}px`
               }}
             >
               <TextEditor
@@ -333,7 +333,7 @@ export default function FileViewer({ documents, currentTool, selectedPageIndex, 
                 // Converter coordenadas do clique para coordenadas do PDF
                 const currentPageData = currentDocument?.pages[currentPage - 1];
                 if (currentPageData) {
-                  const pdfWidth = Math.min(800 * zoom, window.innerWidth * 0.7);
+                  const pdfWidth = Math.min(500 * zoom, window.innerWidth * 0.4);
                   const pdfHeight = (pdfWidth * currentPageData.height) / currentPageData.width;
         
         const pdfX = (x / pdfWidth) * currentPageData.width;
@@ -425,13 +425,13 @@ export default function FileViewer({ documents, currentTool, selectedPageIndex, 
           <div className="flex items-center space-x-3">
             {/* Controles de zoom */}
             <div className="flex items-center space-x-1 bg-white/10 rounded-lg p-1">
-              <button
-                onClick={() => setZoom(Math.max(0.3, zoom - 0.1))}
-                className="px-2 py-1 text-white hover:bg-white/20 rounded text-sm transition-colors"
-                disabled={zoom <= 0.3}
-              >
-                -
-              </button>
+                        <button
+                          onClick={() => setZoom(Math.max(0.7, zoom - 0.1))}
+                          className="px-2 py-1 text-white hover:bg-white/20 rounded text-sm transition-colors"
+                          disabled={zoom <= 0.7}
+                        >
+                          -
+                        </button>
               <span className="px-2 py-1 text-white text-sm min-w-[3rem] text-center">
                 {Math.round(zoom * 100)}%
               </span>
