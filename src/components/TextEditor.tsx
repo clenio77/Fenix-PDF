@@ -30,7 +30,8 @@ export default function TextEditor({ annotation, onSave, onCancel, onDelete, cur
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as HTMLElement;
       if (!target.closest('.text-editor-container')) {
-        onCancel();
+        // Salvar automaticamente ao clicar fora
+        handleSave();
       }
     };
 
@@ -38,7 +39,7 @@ export default function TextEditor({ annotation, onSave, onCancel, onDelete, cur
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [onCancel]);
+  }, [handleSave]);
 
   const handleSave = () => {
     const updatedAnnotation: TextAnnotation = {
@@ -53,6 +54,10 @@ export default function TextEditor({ annotation, onSave, onCancel, onDelete, cur
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && e.ctrlKey) {
+      handleSave();
+    } else if (e.key === 'Enter' && !e.shiftKey) {
+      // Salvar ao pressionar Enter (sem Shift para nova linha)
+      e.preventDefault();
       handleSave();
     } else if (e.key === 'Escape') {
       onCancel();
@@ -105,6 +110,7 @@ export default function TextEditor({ annotation, onSave, onCancel, onDelete, cur
           value={content}
           onChange={(e) => setContent(e.target.value)}
           onKeyDown={handleKeyDown}
+          onBlur={handleSave}
           className="w-full p-2 border border-gray-300 rounded text-sm resize-none"
           style={{
             fontFamily,
@@ -145,7 +151,7 @@ export default function TextEditor({ annotation, onSave, onCancel, onDelete, cur
 
         {/* Dica de uso */}
         <div className="text-xs text-gray-500 text-center">
-          Ctrl+Enter para salvar • Esc para cancelar
+          Enter para salvar • Shift+Enter para nova linha • Esc para cancelar
         </div>
       </div>
     </div>

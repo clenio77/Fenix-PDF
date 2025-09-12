@@ -21,7 +21,7 @@ const withPWA = require('next-pwa')({
 const nextConfig = {
   output: 'standalone',
   experimental: {
-    serverComponentsExternalPackages: ['canvas'],
+    // Configurações experimentais removidas
   },
   webpack: (config, { isServer }) => {
     // Configuração mais segura para fallbacks

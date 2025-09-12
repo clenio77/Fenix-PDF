@@ -278,6 +278,8 @@ export default function FileViewer({ documents, currentTool, selectedPageIndex, 
   const handleUpdateAnnotation = (updatedAnnotation: TextAnnotation) => {
     if (!currentDocument) return;
 
+    console.log('Salvando anotação:', updatedAnnotation);
+
     const currentPageIndex = currentPage - 1;
     const updatedDocument = PDFService.updateTextAnnotation(
       currentDocument,
@@ -292,6 +294,10 @@ export default function FileViewer({ documents, currentTool, selectedPageIndex, 
 
     onDocumentsUpdate(updatedDocuments);
     setEditingAnnotation(null);
+    
+    // Feedback visual de sucesso
+    NotificationService.success('Anotação salva com sucesso!');
+    console.log('Anotação salva com sucesso!');
   };
 
   const handleDeleteAnnotation = () => {
