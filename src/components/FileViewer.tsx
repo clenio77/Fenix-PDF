@@ -8,8 +8,11 @@ import { NotificationService } from '../lib/notifications';
 import TextEditor from './TextEditor';
 import { detectTextAlignment, preserveOriginalSpacing } from './TextAlignmentHelper';
 
-// Configurar o worker do PDF.js
+// Configurar o worker do PDF.js com configurações mais robustas
 pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
+
+// Configurações adicionais para melhorar a renderização
+pdfjs.GlobalWorkerOptions.workerPort = null;
 
 interface FileViewerProps {
   documents: PDFDocument[];
@@ -29,6 +32,120 @@ export default function FileViewer({ documents, currentTool, selectedPageIndex, 
   const [editingPdfText, setEditingPdfText] = useState(false);
   const [pdfTextSelection, setPdfTextSelection] = useState<{text: string, x: number, y: number, width: number, height: number} | null>(null);
   const viewerRef = useRef<HTMLDivElement>(null);
+
+  // Função para corrigir renderização do texto de forma mais agressiva
+  const fixTextRendering = () => {
+    try {
+      // Aguardar um pouco mais para garantir que o DOM esteja pronto
+      setTimeout(() => {
+        const textLayer = document.querySelector('.react-pdf__Page__textContent');
+        if (textLayer) {
+          const spans = textLayer.querySelectorAll('span');
+          
+          // Limpar estilos conflitantes primeiro
+          spans.forEach((span) => {
+            const element = span as HTMLElement;
+            element.style.cssText = '';
+          });
+          
+          // Aplicar estilos corretos
+          spans.forEach((span, index) => {
+            const element = span as HTMLElement;
+            
+            // Estilos essenciais para evitar sobreposição
+            element.style.position = 'absolute';
+            element.style.zIndex = `${index + 1}`;
+            element.style.pointerEvents = 'auto';
+            element.style.cursor = 'text';
+            element.style.color = 'transparent';
+            element.style.opacity = '1';
+            element.style.whiteSpace = 'pre';
+            element.style.fontSize = 'inherit';
+            element.style.fontFamily = 'inherit';
+            element.style.lineHeight = 'inherit';
+            
+            // Corrigir transform-origin se houver transform
+            if (element.style.transform) {
+              element.style.transformOrigin = '0% 0%';
+            }
+            
+            // Garantir que não há margens ou padding conflitantes
+            element.style.margin = '0';
+            element.style.padding = '0';
+            element.style.border = 'none';
+            element.style.outline = 'none';
+          });
+          
+          console.log(`Corrigidos ${spans.length} elementos de texto com abordagem agressiva`);
+        }
+      }, 300);
+    } catch (error) {
+      console.error('Erro ao corrigir renderização do texto:', error);
+    }
+  };
+
+  // Configurar renderização de texto quando o componente for montado
+  useEffect(() => {
+    // Configurar estilos globais para melhorar renderização
+    const style = document.createElement('style');
+    style.textContent = `
+      .react-pdf__Page__textContent {
+        opacity: 1 !important;
+      }
+      .react-pdf__Page__textContent span {
+        opacity: 1 !important;
+        mix-blend-mode: multiply !important;
+      }
+    `;
+    document.head.appendChild(style);
+    
+    return () => {
+      document.head.removeChild(style);
+    };
+  }, []);
+
+  // Corrigir renderização quando o zoom mudar
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      fixTextRendering();
+    }, 100);
+    
+    return () => clearTimeout(timer);
+  }, [zoom, currentPage]);
+
+  // Observer para detectar mudanças no DOM e aplicar correções automaticamente
+  useEffect(() => {
+    const observer = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        if (mutation.type === 'childList') {
+          mutation.addedNodes.forEach((node) => {
+            if (node.nodeType === Node.ELEMENT_NODE) {
+              const element = node as Element;
+              if (element.classList.contains('react-pdf__Page__textContent') || 
+                  element.querySelector('.react-pdf__Page__textContent')) {
+                setTimeout(() => {
+                  fixTextRendering();
+                }, 100);
+              }
+            }
+          });
+        }
+      });
+    });
+
+    // Observar mudanças no container principal
+    const container = document.querySelector('.react-pdf__Page');
+    if (container) {
+      observer.observe(container, {
+        childList: true,
+        subtree: true
+      });
+    }
+
+    return () => {
+      observer.disconnect();
+    };
+  }, [currentPage]);
 
   useEffect(() => {
     // Calcular o total de páginas de todos os documentos
@@ -88,6 +205,7 @@ export default function FileViewer({ documents, currentTool, selectedPageIndex, 
             file={currentDocument.file}
             onLoadSuccess={({ numPages }) => {
               // PDF carregado com sucesso
+              console.log('PDF carregado com sucesso:', numPages, 'páginas');
             }}
             onLoadError={(error) => {
               console.error('Erro ao carregar PDF:', error);
@@ -98,6 +216,18 @@ export default function FileViewer({ documents, currentTool, selectedPageIndex, 
               width={Math.min(600 * zoom, window.innerWidth * 0.6)}
               renderTextLayer={true}
               renderAnnotationLayer={false}
+              scale={zoom}
+              onLoadSuccess={(page) => {
+                console.log('Página carregada com sucesso:', page);
+                
+                // Aguardar um pouco e então corrigir a renderização do texto
+                setTimeout(() => {
+                  fixTextRendering();
+                }, 200);
+              }}
+              onLoadError={(error) => {
+                console.error('Erro ao carregar página:', error);
+              }}
             />
           </Document>
           
