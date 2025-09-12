@@ -401,7 +401,9 @@ export class PDFService {
     // Limpar cache se exceder o tamanho máximo
     if (PDFService.pdfCache.size >= PDFService.MAX_CACHE_SIZE) {
       const firstKey = PDFService.pdfCache.keys().next().value;
-      PDFService.pdfCache.delete(firstKey);
+      if (firstKey) {
+        PDFService.pdfCache.delete(firstKey);
+      }
     }
     
     // Adicionar ao cache

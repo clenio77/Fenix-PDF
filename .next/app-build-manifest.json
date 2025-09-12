@@ -1,28 +1,30 @@
 {
   "pages": {
     "/_not-found/page": [
-      "static/chunks/webpack-a3c37fcbf859f6f9.js",
-      "static/chunks/fd9d1056-e8f46640f2b5ea13.js",
-      "static/chunks/117-e20bca1711e41425.js",
-      "static/chunks/main-app-27ec155c7042ae7f.js",
-      "static/chunks/app/_not-found/page-dad9743199d1d4c3.js"
+      "static/chunks/webpack-616e068a201ad621.js",
+      "static/chunks/fd9d1056-3c7873e7614548f8.js",
+      "static/chunks/117-f44e819764b7f312.js",
+      "static/chunks/main-app-1c9daae6dc3fef31.js",
+      "static/chunks/app/_not-found/page-89261e07a898b13a.js"
     ],
     "/layout": [
-      "static/chunks/webpack-a3c37fcbf859f6f9.js",
-      "static/chunks/fd9d1056-e8f46640f2b5ea13.js",
-      "static/chunks/117-e20bca1711e41425.js",
-      "static/chunks/main-app-27ec155c7042ae7f.js",
-      "static/css/5becbccf8ff63907.css",
-      "static/chunks/app/layout-dfa36714f785220d.js"
+      "static/chunks/webpack-616e068a201ad621.js",
+      "static/chunks/fd9d1056-3c7873e7614548f8.js",
+      "static/chunks/117-f44e819764b7f312.js",
+      "static/chunks/main-app-1c9daae6dc3fef31.js",
+      "static/css/64dd1ffdcf29571a.css",
+      "static/chunks/64-4ad062c6b579e656.js",
+      "static/chunks/app/layout-22f23f0c10456087.js"
     ],
     "/page": [
-      "static/chunks/webpack-a3c37fcbf859f6f9.js",
-      "static/chunks/fd9d1056-e8f46640f2b5ea13.js",
-      "static/chunks/117-e20bca1711e41425.js",
-      "static/chunks/main-app-27ec155c7042ae7f.js",
-      "static/chunks/7a49ec60-86c332899af77d8a.js",
-      "static/chunks/90-77b5668266507a03.js",
-      "static/chunks/app/page-5319f76dbdc3dcf4.js"
+      "static/chunks/webpack-616e068a201ad621.js",
+      "static/chunks/fd9d1056-3c7873e7614548f8.js",
+      "static/chunks/117-f44e819764b7f312.js",
+      "static/chunks/main-app-1c9daae6dc3fef31.js",
+      "static/chunks/7a49ec60-9ce2b82e52172e70.js",
+      "static/chunks/64-4ad062c6b579e656.js",
+      "static/chunks/332-0f5f4f66cd359f0f.js",
+      "static/chunks/app/page-293ebeefdff36480.js"
     ]
   }
 }

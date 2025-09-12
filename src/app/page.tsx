@@ -25,14 +25,6 @@ export default function Home() {
   // Calcular total de páginas
   const totalPages = documents.reduce((sum, doc) => sum + doc.pages.length, 0);
   
-  // Keyboard shortcuts
-  useFenixShortcuts({
-    onUndo: canUndo ? undo : undefined,
-    onRedo: canRedo ? redo : undefined,
-    onSave: documents.length > 0 ? handleSaveAndDownload : undefined,
-    onSelectTool: setCurrentTool,
-  });
-
   const handleFilesUploaded = (newDocs: PDFDocument[]) => {
     setDocuments(prev => [...prev, ...newDocs]);
   };
@@ -43,10 +35,10 @@ export default function Home() {
       return;
     }
     
+    // Mostrar loading com notificação
+    const loadingToastId = NotificationService.loading('Unindo PDFs...');
+    
     try {
-      // Mostrar loading com notificação
-      const loadingToastId = NotificationService.loading('Unindo PDFs...');
-      
       const blob = await PDFService.generatePDF(documents);
       
       // Gerar nome do arquivo baseado na data
@@ -63,6 +55,14 @@ export default function Home() {
       NotificationService.updateError(loadingToastId, 'Erro ao gerar PDF. Verifique se os arquivos estão válidos e tente novamente.');
     }
   };
+
+  // Keyboard shortcuts
+  useFenixShortcuts({
+    onUndo: canUndo ? undo : undefined,
+    onRedo: canRedo ? redo : undefined,
+    onSave: documents.length > 0 ? handleSaveAndDownload : undefined,
+    onSelectTool: setCurrentTool,
+  });
 
   return (
     <div className="min-h-screen flex flex-col relative">
