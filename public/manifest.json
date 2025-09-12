@@ -1,0 +1,56 @@
+{
+  "name": "Fênix PDF - Editor de PDF Profissional",
+  "short_name": "Fênix PDF",
+  "description": "Aplicação web moderna para manipulação de arquivos PDF",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#2563eb",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "lang": "pt-BR",
+  "categories": ["productivity", "utilities"],
+  "icons": [
+    {
+      "src": "/images/logocleniopdf.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/images/logocleniopdf.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/images/logocleniopdf.svg",
+      "sizes": "1280x720",
+      "type": "image/svg+xml",
+      "form_factor": "wide"
+    }
+  ],
+  "features": [
+    "PDF Upload",
+    "PDF Merge",
+    "Text Annotation",
+    "Page Reordering",
+    "Zoom Control"
+  ],
+  "shortcuts": [
+    {
+      "name": "Upload PDF",
+      "short_name": "Upload",
+      "description": "Upload de arquivos PDF",
+      "url": "/?action=upload",
+      "icons": [
+        {
+          "src": "/images/logocleniopdf.svg",
+          "sizes": "96x96"
+        }
+      ]
+    }
+  ]
+}

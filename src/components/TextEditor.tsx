@@ -8,9 +8,10 @@ interface TextEditorProps {
   onSave: (updatedAnnotation: TextAnnotation) => void;
   onCancel: () => void;
   onDelete: () => void;
+  currentTool?: string;
 }
 
-export default function TextEditor({ annotation, onSave, onCancel, onDelete }: TextEditorProps) {
+export default function TextEditor({ annotation, onSave, onCancel, onDelete, currentTool }: TextEditorProps) {
   const [content, setContent] = useState(annotation.content);
   const [fontSize, setFontSize] = useState(annotation.fontSize || 12);
   const [fontFamily, setFontFamily] = useState(annotation.fontFamily || 'Arial');
@@ -111,7 +112,7 @@ export default function TextEditor({ annotation, onSave, onCancel, onDelete }: T
             color,
             minHeight: '60px'
           }}
-          placeholder="Digite seu texto aqui..."
+          placeholder={currentTool === 'edit' ? "Digite o texto para editar..." : "Digite seu texto aqui..."}
         />
 
         {/* Botões de ação */}

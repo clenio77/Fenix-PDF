@@ -19,20 +19,25 @@ export default function Toolbox({ currentTool, onToolChange }: ToolboxProps) {
       icon: 'M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7M18 9l-4-4m0 0L8 9m6-4v12',
       description: 'Adicionar nova anotação de texto'
     },
+    { 
+      id: 'edit', 
+      name: 'Editar Texto', 
+      icon: 'M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z',
+      description: 'Editar texto existente no PDF'
+    },
   ];
 
   return (
-    <div className="bg-white border border-gray-200 rounded-lg p-4">
-      <h3 className="font-medium text-lg mb-3">Ferramentas</h3>
-      <div className="flex flex-wrap gap-2">
+    <div className="space-y-4">
+      <div className="flex flex-wrap gap-3">
         {tools.map((tool) => (
           <button
             key={tool.id}
-            className={`toolbox-btn flex items-center space-x-2 px-3 py-2 ${currentTool === tool.id ? 'bg-blue-100 border-blue-300' : ''}`}
+            className={`toolbox-btn flex items-center space-x-2 ${currentTool === tool.id ? 'active' : ''}`}
             onClick={() => onToolChange(tool.id)}
             title={tool.description}
           >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={tool.icon} />
             </svg>
             <span className="text-sm font-medium">{tool.name}</span>
@@ -41,12 +46,15 @@ export default function Toolbox({ currentTool, onToolChange }: ToolboxProps) {
       </div>
       
       {/* Instruções de uso */}
-      <div className="mt-4 text-sm text-gray-600">
+      <div className="text-sm text-white/70">
         {currentTool === 'select' && (
           <p>Clique em uma anotação para editá-la ou excluí-la.</p>
         )}
         {currentTool === 'text' && (
           <p>Clique em qualquer lugar da página para adicionar uma nova anotação de texto.</p>
+        )}
+        {currentTool === 'edit' && (
+          <p>Clique diretamente no texto do PDF para editá-lo.</p>
         )}
       </div>
     </div>
