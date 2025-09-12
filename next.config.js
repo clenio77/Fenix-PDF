@@ -34,8 +34,22 @@ const nextConfig = {
         process: require.resolve('process/browser'),
         crypto: require.resolve('crypto-browserify'),
         buffer: require.resolve('buffer'),
+        canvas: false,
+      };
+    } else {
+      // Para o servidor, ignorar completamente o módulo canvas
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        canvas: false,
       };
     }
+    
+    // Ignorar módulos problemáticos no servidor
+    if (isServer) {
+      config.externals = config.externals || [];
+      config.externals.push('canvas');
+    }
+    
     return config;
   },
 };
