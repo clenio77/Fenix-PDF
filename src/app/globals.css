@@ -204,7 +204,7 @@ body::before {
     display: block;
   }
   
-  /* Melhorar renderização do texto do PDF */
+  /* Melhorar renderização do texto do PDF - Abordagem mais agressiva */
   .react-pdf__Page__textContent {
     position: absolute !important;
     top: 0 !important;
@@ -214,6 +214,7 @@ body::before {
     overflow: hidden !important;
     pointer-events: none !important;
     z-index: 1 !important;
+    opacity: 1 !important;
   }
   
   .react-pdf__Page__textContent span {
@@ -223,7 +224,18 @@ body::before {
     transform-origin: 0% 0% !important;
     color: transparent !important;
     pointer-events: auto !important;
-    z-index: 2 !important;
+    z-index: auto !important;
+    opacity: 1 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: none !important;
+    outline: none !important;
+    font-size: inherit !important;
+    font-family: inherit !important;
+    line-height: inherit !important;
+    text-decoration: none !important;
+    text-shadow: none !important;
+    background: transparent !important;
   }
   
   /* Garantir que o container do PDF não corte o conteúdo */
@@ -242,6 +254,14 @@ body::before {
   
   .react-pdf__Page__textContent span[style*="transform"] {
     transform-origin: 0% 0% !important;
+  }
+  
+  /* Forçar reset de estilos conflitantes */
+  .react-pdf__Page__textContent span * {
+    all: unset !important;
+    position: absolute !important;
+    color: transparent !important;
+    opacity: 1 !important;
   }
   
   /* Responsividade */
