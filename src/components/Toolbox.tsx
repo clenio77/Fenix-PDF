@@ -28,7 +28,7 @@ export default function Toolbox({ currentTool, onToolChange }: ToolboxProps) {
   ];
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4" role="toolbar" aria-label="Ferramentas de edição">
       <div className="flex flex-wrap gap-3">
         {tools.map((tool) => (
           <button
@@ -36,6 +36,10 @@ export default function Toolbox({ currentTool, onToolChange }: ToolboxProps) {
             className={`toolbox-btn flex items-center space-x-2 ${currentTool === tool.id ? 'active' : ''}`}
             onClick={() => onToolChange(tool.id)}
             title={tool.description}
+            aria-label={tool.description}
+            aria-pressed={currentTool === tool.id}
+            role="button"
+            tabIndex={0}
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={tool.icon} />

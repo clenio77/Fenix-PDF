@@ -1,5 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
+import NotificationProvider from '../components/NotificationProvider';
+import { ThemeProvider } from '../lib/ThemeContext';
 
 export const metadata: Metadata = {
   title: 'Fênix PDF - Editor de PDF Profissional',
@@ -42,7 +44,10 @@ export default function RootLayout({
   return (
     <html lang="pt-BR">
       <body>
-        {children}
+        <ThemeProvider>
+          {children}
+          <NotificationProvider />
+        </ThemeProvider>
       </body>
     </html>
   );

@@ -9,11 +9,29 @@ import FileList from '../components/FileList';
 import Toolbox from '../components/Toolbox';
 import { PDFDocument } from '../lib/types';
 import { PDFService } from '../lib/pdfService';
+import { NotificationService } from '../lib/notifications';
+import { useHistory } from '../lib/useHistory';
+import { useFenixShortcuts } from '../lib/useKeyboardShortcuts';
+import Breadcrumb from '../components/Breadcrumb';
 
 export default function Home() {
   const [documents, setDocuments] = useState<PDFDocument[]>([]);
   const [currentTool, setCurrentTool] = useState<string>('select');
   const [selectedPageIndex, setSelectedPageIndex] = useState<number | null>(null);
+  
+  // Hook de histórico para undo/redo
+  const { addAction, undo, redo, canUndo, canRedo } = useHistory();
+  
+  // Calcular total de páginas
+  const totalPages = documents.reduce((sum, doc) => sum + doc.pages.length, 0);
+  
+  // Keyboard shortcuts
+  useFenixShortcuts({
+    onUndo: canUndo ? undo : undefined,
+    onRedo: canRedo ? redo : undefined,
+    onSave: documents.length > 0 ? handleSaveAndDownload : undefined,
+    onSelectTool: setCurrentTool,
+  });
 
   const handleFilesUploaded = (newDocs: PDFDocument[]) => {
     setDocuments(prev => [...prev, ...newDocs]);
@@ -21,33 +39,15 @@ export default function Home() {
 
   const handleSaveAndDownload = async () => {
     if (documents.length === 0) {
-      alert('Nenhum documento carregado para unir.');
+      NotificationService.warning('Nenhum documento carregado para unir.');
       return;
     }
     
     try {
-      // Mostrar loading
-      const loadingMessage = document.createElement('div');
-      loadingMessage.innerHTML = `
-        <div style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); 
-                    background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 20px rgba(0,0,0,0.3);
-                    z-index: 9999; text-align: center;">
-          <div style="margin-bottom: 10px;">
-            <div style="width: 40px; height: 40px; border: 4px solid #f3f3f3; border-top: 4px solid #3498db; 
-                        border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto;"></div>
-          </div>
-          <p style="margin: 0; color: #333;">Unindo PDFs...</p>
-        </div>
-        <style>
-          @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        </style>
-      `;
-      document.body.appendChild(loadingMessage);
+      // Mostrar loading com notificação
+      const loadingToastId = NotificationService.loading('Unindo PDFs...');
       
       const blob = await PDFService.generatePDF(documents);
-      
-      // Remover loading
-      document.body.removeChild(loadingMessage);
       
       // Gerar nome do arquivo baseado na data
       const now = new Date();
@@ -57,10 +57,10 @@ export default function Home() {
       PDFService.downloadPDF(blob, filename);
       
       // Mostrar sucesso
-      alert(`PDF gerado com sucesso! ${documents.length} documento(s) unido(s) em "${filename}"`);
+      NotificationService.updateSuccess(loadingToastId, `PDF gerado com sucesso! ${documents.length} documento(s) unido(s) em "${filename}"`);
     } catch (error) {
       console.error('Erro ao gerar PDF:', error);
-      alert('Erro ao gerar PDF. Verifique se os arquivos estão válidos e tente novamente.');
+      NotificationService.updateError(loadingToastId, 'Erro ao gerar PDF. Verifique se os arquivos estão válidos e tente novamente.');
     }
   };
 
@@ -71,6 +71,15 @@ export default function Home() {
 
       {/* Layout Principal Responsivo */}
       <main className="container-responsive py-8 flex-grow">
+        {/* Breadcrumb Navigation */}
+        <div className="mb-6">
+          <Breadcrumb 
+            documents={documents} 
+            currentPageIndex={selectedPageIndex} 
+            totalPages={totalPages} 
+          />
+        </div>
+        
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 sm:gap-6 lg:gap-8">
           {/* Sidebar - Responsiva */}
           <aside className="lg:col-span-1 space-y-4 sm:space-y-6">

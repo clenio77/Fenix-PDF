@@ -4,6 +4,10 @@ import { PDFDocument as PDFLibDocument, PDFPage as PDFLibPage, degrees } from 'p
 import { PDFDocument as PDFDocumentType, PDFPage, TextAnnotation } from './types';
 
 export class PDFService {
+  // Cache para gerenciar instâncias de PDF e evitar vazamentos de memória
+  private static pdfCache = new Map<string, any>();
+  private static readonly MAX_CACHE_SIZE = 10;
+  
   // Force redeploy - fix Vercel cache issue
   /**
    * Carrega um arquivo PDF e retorna um objeto PDFDocument
@@ -35,14 +39,19 @@ export class PDFService {
             });
           }
 
+          const documentId = `doc-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+          
           const document: PDFDocumentType = {
-            id: `doc-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+            id: documentId,
             name: file.name,
             size: file.size,
             pages,
             file: file,
             pdfDoc // Armazenar a instância do PDFLib para manipulações futuras
           };
+          
+          // Gerenciar cache de memória
+          PDFService.manageCache(documentId, pdfDoc);
           
           resolve(document);
         } catch (error) {
@@ -310,5 +319,43 @@ export class PDFService {
         </text>
       </svg>
     `)}`;
+  }
+
+  /**
+   * Gerencia o cache de PDFs para evitar vazamentos de memória
+   */
+  private static manageCache(documentId: string, pdfDoc: any): void {
+    // Limpar cache se exceder o tamanho máximo
+    if (PDFService.pdfCache.size >= PDFService.MAX_CACHE_SIZE) {
+      const firstKey = PDFService.pdfCache.keys().next().value;
+      PDFService.pdfCache.delete(firstKey);
+    }
+    
+    // Adicionar ao cache
+    PDFService.pdfCache.set(documentId, pdfDoc);
+  }
+
+  /**
+   * Limpa uma instância específica do PDF da memória
+   */
+  static cleanupDocument(documentId: string): void {
+    PDFService.pdfCache.delete(documentId);
+  }
+
+  /**
+   * Limpa todo o cache de PDFs
+   */
+  static clearCache(): void {
+    PDFService.pdfCache.clear();
+  }
+
+  /**
+   * Obtém estatísticas do cache
+   */
+  static getCacheStats(): { size: number; maxSize: number } {
+    return {
+      size: PDFService.pdfCache.size,
+      maxSize: PDFService.MAX_CACHE_SIZE
+    };
   }
 }

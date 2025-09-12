@@ -3,6 +3,8 @@
 import { useState, useRef } from 'react';
 import { PDFDocument } from '../lib/types';
 import { PDFService } from '../lib/pdfService';
+import { ValidationService } from '../lib/validation';
+import { NotificationService } from '../lib/notifications';
 
 interface FileUploadProps {
   onFilesUploaded: (documents: PDFDocument[]) => void;
@@ -37,28 +39,41 @@ export default function FileUpload({ onFilesUploaded }: FileUploadProps) {
   };
 
   const processFiles = async (files: FileList) => {
-    const pdfFiles = Array.from(files).filter(file => file.type === 'application/pdf');
+    // Validar arquivos antes de processar
+    const { validFiles, errors } = ValidationService.validatePDFs(files);
     
-    if (pdfFiles.length === 0) return;
+    // Mostrar erros de validação
+    if (errors.length > 0) {
+      errors.forEach(error => NotificationService.error(error));
+    }
+    
+    if (validFiles.length === 0) {
+      if (errors.length === 0) {
+        NotificationService.warning('Nenhum arquivo PDF válido encontrado');
+      }
+      return;
+    }
 
     try {
       const newDocuments: PDFDocument[] = [];
       
-      for (const file of pdfFiles) {
+      for (const file of validFiles) {
         try {
           const document = await PDFService.loadPDF(file);
           newDocuments.push(document);
         } catch (error) {
           console.error(`Erro ao carregar ${file.name}:`, error);
-          // Continuar com os outros arquivos mesmo se um falhar
+          NotificationService.error(`Erro ao carregar ${file.name}: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
         }
       }
 
       if (newDocuments.length > 0) {
         onFilesUploaded(newDocuments);
+        NotificationService.success(`${newDocuments.length} documento(s) carregado(s) com sucesso`);
       }
     } catch (error) {
       console.error('Erro ao processar arquivos:', error);
+      NotificationService.error('Erro ao processar arquivos');
     }
     
     // Limpar o input para permitir selecionar os mesmos arquivos novamente

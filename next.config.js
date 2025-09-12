@@ -23,14 +23,19 @@ const nextConfig = {
   experimental: {
     serverComponentsExternalPackages: ['canvas'],
   },
-  webpack: (config) => {
-    config.resolve.fallback = {
-      ...config.resolve.fallback,
-      fs: false,
-      path: false,
-      stream: false,
-      process: false,
-    };
+  webpack: (config, { isServer }) => {
+    // Configuração mais segura para fallbacks
+    if (!isServer) {
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        fs: false,
+        path: require.resolve('path-browserify'),
+        stream: require.resolve('stream-browserify'),
+        process: require.resolve('process/browser'),
+        crypto: require.resolve('crypto-browserify'),
+        buffer: require.resolve('buffer'),
+      };
+    }
     return config;
   },
 };

@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Document, Page, pdfjs } from 'react-pdf';
 import { PDFDocument, TextAnnotation } from '../lib/types';
 import { PDFService } from '../lib/pdfService';
+import { NotificationService } from '../lib/notifications';
 import TextEditor from './TextEditor';
 
 // Configurar o worker do PDF.js
@@ -398,7 +399,7 @@ export default function FileViewer({ documents, currentTool, selectedPageIndex, 
         setEditingPdfText(true);
       } else {
         console.log('Nenhum texto detectado na posição clicada');
-        alert('Nenhum texto detectado nesta posição. Clique diretamente sobre o texto que deseja editar.');
+        NotificationService.warning('Nenhum texto detectado nesta posição. Clique diretamente sobre o texto que deseja editar.');
       }
       
     } else {

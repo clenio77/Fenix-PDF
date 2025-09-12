@@ -25,7 +25,7 @@ export interface PDFDocument {
   size: number;
   pages: PDFPage[];
   file: File;
-  pdfDoc?: any; // Instância do PDFLib para manipulações
+  pdfDoc?: import('pdf-lib').PDFDocument; // Instância tipada do PDFLib para manipulações
 }
 
 export interface PDFEngineState {
