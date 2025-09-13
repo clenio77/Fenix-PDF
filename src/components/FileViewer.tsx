@@ -432,28 +432,72 @@ export default function FileViewer({ documents, currentTool, selectedPageIndex, 
       const y = e.clientY - rect.top;
       
       // Tentar encontrar texto na posição clicada
-      const textElements = document.querySelectorAll('.react-pdf__Page__textContent span');
       let clickedText = '';
       let foundRect: {x: number, y: number, width: number, height: number} | null = null;
       
-      textElements.forEach((span) => {
-        const spanRect = span.getBoundingClientRect();
-        const containerRect = e.currentTarget.getBoundingClientRect();
-        
-        const relativeX = spanRect.left - containerRect.left;
-        const relativeY = spanRect.top - containerRect.top;
-        
-        if (x >= relativeX && x <= relativeX + spanRect.width &&
-            y >= relativeY && y <= relativeY + spanRect.height) {
-          clickedText = span.textContent || '';
+      // Método 1: Usar elementFromPoint para encontrar o elemento exato
+      const elementAtPoint = document.elementFromPoint(e.clientX, e.clientY);
+      console.log('Elemento no ponto:', elementAtPoint);
+      
+      if (elementAtPoint) {
+        const text = elementAtPoint.textContent?.trim() || '';
+        if (text && text.length > 0) {
+          const elementRect = elementAtPoint.getBoundingClientRect();
+          const containerRect = e.currentTarget.getBoundingClientRect();
+          
+          clickedText = text;
           foundRect = {
-            x: relativeX,
-            y: relativeY,
-            width: spanRect.width,
-            height: spanRect.height
+            x: elementRect.left - containerRect.left,
+            y: elementRect.top - containerRect.top,
+            width: elementRect.width,
+            height: elementRect.height
           };
+          console.log('Texto encontrado via elementFromPoint:', text);
         }
-      });
+      }
+      
+      // Método 2: Se não encontrou, tentar seletores específicos
+      if (!clickedText) {
+        const selectors = [
+          '.react-pdf__Page__textContent span',
+          '.react-pdf__Page__textContent div',
+          '.react-pdf__Page__textContent',
+          '[data-page-number] span',
+          '[data-page-number] div'
+        ];
+        
+        for (const selector of selectors) {
+          const textElements = document.querySelectorAll(selector);
+          console.log(`Tentando seletor: ${selector}, encontrados: ${textElements.length} elementos`);
+          
+          textElements.forEach((element) => {
+            const elementRect = element.getBoundingClientRect();
+            const containerRect = e.currentTarget.getBoundingClientRect();
+            
+            const relativeX = elementRect.left - containerRect.left;
+            const relativeY = elementRect.top - containerRect.top;
+            
+            // Verificar se o clique está dentro do elemento
+            if (x >= relativeX && x <= relativeX + elementRect.width &&
+                y >= relativeY && y <= relativeY + elementRect.height) {
+              const text = element.textContent?.trim() || '';
+              console.log(`Texto encontrado: "${text}"`);
+              
+              if (text && text.length > 0) {
+                clickedText = text;
+                foundRect = {
+                  x: relativeX,
+                  y: relativeY,
+                  width: elementRect.width,
+                  height: elementRect.height
+                };
+              }
+            }
+          });
+          
+          if (clickedText) break; // Se encontrou texto, parar de procurar
+        }
+      }
       
       if (clickedText && foundRect) {
         console.log('Texto detectado:', clickedText);
@@ -468,7 +512,10 @@ export default function FileViewer({ documents, currentTool, selectedPageIndex, 
         setEditingPdfText(true);
       } else {
         console.log('Nenhum texto detectado na posição clicada');
-        NotificationService.warning('Nenhum texto detectado nesta posição. Clique diretamente sobre o texto que deseja editar.');
+        console.log('Coordenadas do clique:', { x, y });
+        console.log('Elementos de texto encontrados:', document.querySelectorAll('.react-pdf__Page__textContent').length);
+        
+        NotificationService.warning('Nenhum texto detectado nesta posição. Certifique-se de que o PDF foi carregado completamente e clique diretamente sobre o texto visível.');
       }
       
     } else {
