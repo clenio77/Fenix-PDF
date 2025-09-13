@@ -90,8 +90,8 @@ body::before {
   
   /* Cards Modernos */
   .card {
-    @apply bg-white/10 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/20 overflow-hidden relative;
-    background: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%);
+    @apply bg-white/25 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/30 overflow-hidden relative;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.25) 0%, rgba(255, 255, 255, 0.15) 100%);
   }
   
   .card::before {
@@ -105,7 +105,7 @@ body::before {
   }
   
   .card-header {
-    @apply px-8 py-6 border-b border-white/10 bg-gradient-to-r from-white/5 to-white/10;
+    @apply px-8 py-6 border-b border-white/20 bg-gradient-to-r from-white/15 to-white/25;
   }
   
   .card-body {
@@ -114,7 +114,7 @@ body::before {
   
   /* Toolbox Moderno */
   .toolbox-btn {
-    @apply px-6 py-4 bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl hover:bg-white/20 hover:border-white/40 transition-all duration-300 cursor-pointer font-medium text-white hover:text-white shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 relative overflow-hidden;
+    @apply px-6 py-4 bg-white/20 backdrop-blur-md border border-white/30 rounded-2xl hover:bg-white/30 hover:border-white/50 transition-all duration-300 cursor-pointer font-medium text-white hover:text-white shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 relative overflow-hidden;
   }
   
   .toolbox-btn::before {
@@ -133,7 +133,7 @@ body::before {
   }
   
   .toolbox-btn.active {
-    @apply bg-gradient-to-r from-indigo-500 to-purple-600 text-white border-indigo-400 shadow-2xl;
+    @apply bg-gradient-to-r from-indigo-600 to-purple-700 text-white border-indigo-500 shadow-2xl ring-2 ring-indigo-300;
   }
   
   .toolbox-btn:disabled {
@@ -238,11 +238,11 @@ body::before {
   /* PWA e Mobile */
   @media (max-width: 768px) {
     .card {
-      @apply rounded-xl shadow-md;
+      @apply rounded-xl shadow-md bg-white/30 border-white/40;
     }
     
     .card-header {
-      @apply px-4 py-3;
+      @apply px-4 py-3 bg-white/20 border-white/30;
     }
     
     .card-body {
@@ -254,7 +254,7 @@ body::before {
     }
     
     .toolbox-btn {
-      @apply px-3 py-2 text-sm;
+      @apply px-3 py-2 text-sm bg-white/25 border-white/35;
     }
   }
   
