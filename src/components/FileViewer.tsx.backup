@@ -26,17 +26,7 @@ export default function FileViewer({ documents, currentTool, selectedPageIndex, 
   const [newAnnotationCoords, setNewAnnotationCoords] = useState<{x: number, y: number, screenX: number, screenY: number} | null>(null);
   const [zoom, setZoom] = useState(1);
   const [editingPdfText, setEditingPdfText] = useState(false);
-  const [pdfTextSelection, setPdfTextSelection] = useState<{
-    text: string, 
-    screenX: number, 
-    screenY: number, 
-    pdfX: number, 
-    pdfY: number, 
-    pageIndex: number,
-    fontSize: number,
-    textWidth: number,
-    textHeight: number
-  } | null>(null);
+  const [pdfTextSelection, setPdfTextSelection] = useState<{text: string, x: number, y: number, width: number, height: number, pageIndex: number} | null>(null);
   const viewerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -197,121 +187,99 @@ export default function FileViewer({ documents, currentTool, selectedPageIndex, 
             </div>
           )}
 
-          {/* Editor de texto do PDF baseado em coordenadas */}
+          {/* Editor de texto do PDF */}
           {editingPdfText && pdfTextSelection && (
             <div
               className="absolute z-40"
               style={{
-                left: `${pdfTextSelection.screenX}px`,
-                top: `${pdfTextSelection.screenY}px`,
-                width: '300px'
+                left: `${pdfTextSelection.x}px`,
+                top: `${pdfTextSelection.y}px`,
+                width: `${Math.max(pdfTextSelection.width, 200)}px`
               }}
             >
-              <div className="bg-white border-2 border-blue-500 rounded-lg shadow-lg p-4">
-                <div className="text-sm font-semibold text-gray-800 mb-3">
-                  ✏️ Editar Texto do PDF
+              <div className="bg-white border-2 border-red-500 rounded-lg shadow-lg p-3">
+                <div className="text-xs text-gray-600 mb-2">
+                  Editando texto do PDF:
                 </div>
-                
-                {/* Campo de texto */}
-                <div className="mb-3">
-                  <label className="block text-xs text-gray-600 mb-1">Texto:</label>
-                  <input
-                    type="text"
-                    placeholder="Digite o novo texto..."
-                    className="w-full p-2 border border-gray-300 rounded text-sm"
-                    autoFocus
-                    onKeyDown={async (e) => {
-                      if (e.key === 'Enter') {
-                        await handleSaveText();
-                      } else if (e.key === 'Escape') {
-                        setEditingPdfText(false);
-                        setPdfTextSelection(null);
+                <input
+                  type="text"
+                  defaultValue={pdfTextSelection.text}
+                  className="w-full p-2 border border-gray-300 rounded text-sm mb-2"
+                  autoFocus
+                  onKeyDown={async (e) => {
+                    if (e.key === 'Enter') {
+                      const newText = e.currentTarget.value;
+                      const oldText = pdfTextSelection?.text;
+                      
+                      if (oldText && newText !== oldText && currentDocument) {
+                        try {
+                          const loadingToastId = NotificationService.loading('Editando texto do PDF...');
+                          
+                          const modifiedDocument = await PDFService.editPDFText(
+                            currentDocument,
+                            pdfTextSelection.pageIndex,
+                            oldText,
+                            newText
+                          );
+                          
+                          // Atualizar documentos
+                          const updatedDocuments = documents.map(doc => 
+                            doc.id === currentDocument.id ? modifiedDocument : doc
+                          );
+                          onDocumentsUpdate(updatedDocuments);
+                          
+                          NotificationService.updateSuccess(loadingToastId, 'Texto editado com sucesso!');
+                        } catch (error) {
+                          console.error('Erro ao editar texto:', error);
+                          NotificationService.error('Erro ao editar texto do PDF');
+                        }
                       }
-                    }}
-                  />
-                </div>
-                
-                {/* Controles de posição */}
-                <div className="grid grid-cols-2 gap-2 mb-3">
-                  <div>
-                    <label className="block text-xs text-gray-600 mb-1">X:</label>
-                    <input
-                      type="number"
-                      value={pdfTextSelection.pdfX}
-                      onChange={(e) => setPdfTextSelection({
-                        ...pdfTextSelection,
-                        pdfX: parseFloat(e.target.value) || 0
-                      })}
-                      className="w-full p-1 border border-gray-300 rounded text-xs"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs text-gray-600 mb-1">Y:</label>
-                    <input
-                      type="number"
-                      value={pdfTextSelection.pdfY}
-                      onChange={(e) => setPdfTextSelection({
-                        ...pdfTextSelection,
-                        pdfY: parseFloat(e.target.value) || 0
-                      })}
-                      className="w-full p-1 border border-gray-300 rounded text-xs"
-                    />
-                  </div>
-                </div>
-                
-                {/* Controles de tamanho */}
-                <div className="grid grid-cols-3 gap-2 mb-3">
-                  <div>
-                    <label className="block text-xs text-gray-600 mb-1">Tamanho:</label>
-                    <input
-                      type="number"
-                      value={pdfTextSelection.fontSize}
-                      onChange={(e) => setPdfTextSelection({
-                        ...pdfTextSelection,
-                        fontSize: parseFloat(e.target.value) || 12
-                      })}
-                      className="w-full p-1 border border-gray-300 rounded text-xs"
-                      min="8"
-                      max="72"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs text-gray-600 mb-1">Largura:</label>
-                    <input
-                      type="number"
-                      value={pdfTextSelection.textWidth}
-                      onChange={(e) => setPdfTextSelection({
-                        ...pdfTextSelection,
-                        textWidth: parseFloat(e.target.value) || 100
-                      })}
-                      className="w-full p-1 border border-gray-300 rounded text-xs"
-                      min="20"
-                      max="500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs text-gray-600 mb-1">Altura:</label>
-                    <input
-                      type="number"
-                      value={pdfTextSelection.textHeight}
-                      onChange={(e) => setPdfTextSelection({
-                        ...pdfTextSelection,
-                        textHeight: parseFloat(e.target.value) || 20
-                      })}
-                      className="w-full p-1 border border-gray-300 rounded text-xs"
-                      min="10"
-                      max="100"
-                    />
-                  </div>
-                </div>
-                
-                {/* Botões de ação */}
-                <div className="flex justify-between items-center">
+                      
+                      setEditingPdfText(false);
+                      setPdfTextSelection(null);
+                    } else if (e.key === 'Escape') {
+                      setEditingPdfText(false);
+                      setPdfTextSelection(null);
+                    }
+                  }}
+                />
+                <div className="flex justify-between">
                   <button
-                    onClick={handleSaveText}
+                    onClick={async () => {
+                      const input = document.querySelector('input[type="text"]') as HTMLInputElement;
+                      const newText = input?.value;
+                      const oldText = pdfTextSelection?.text;
+                      
+                      if (oldText && newText && newText !== oldText && currentDocument) {
+                        try {
+                          const loadingToastId = NotificationService.loading('Editando texto do PDF...');
+                          
+                          const modifiedDocument = await PDFService.editPDFText(
+                            currentDocument,
+                            pdfTextSelection.pageIndex,
+                            oldText,
+                            newText
+                          );
+                          
+                          // Atualizar documentos
+                          const updatedDocuments = documents.map(doc => 
+                            doc.id === currentDocument.id ? modifiedDocument : doc
+                          );
+                          onDocumentsUpdate(updatedDocuments);
+                          
+                          NotificationService.updateSuccess(loadingToastId, 'Texto editado com sucesso!');
+                        } catch (error) {
+                          console.error('Erro ao editar texto:', error);
+                          NotificationService.error('Erro ao editar texto do PDF');
+                        }
+                      }
+                      
+                      setEditingPdfText(false);
+                      setPdfTextSelection(null);
+                    }}
                     className="px-3 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700"
                   >
-                    💾 Salvar
+                    Salvar
                   </button>
                   <button
                     onClick={() => {
@@ -320,12 +288,11 @@ export default function FileViewer({ documents, currentTool, selectedPageIndex, 
                     }}
                     className="px-3 py-1 bg-gray-500 text-white text-xs rounded hover:bg-gray-600"
                   >
-                    ❌ Cancelar
+                    Cancelar (Esc)
                   </button>
-                </div>
-                
-                <div className="text-xs text-gray-500 mt-2">
-                  📍 Posição: ({pdfTextSelection.pdfX.toFixed(1)}, {pdfTextSelection.pdfY.toFixed(1)})
+                  <div className="text-xs text-gray-500">
+                    Enter para salvar • Esc para cancelar
+                  </div>
                 </div>
               </div>
             </div>
@@ -333,49 +300,6 @@ export default function FileViewer({ documents, currentTool, selectedPageIndex, 
         </div>
       </div>
     );
-  };
-
-  // Função para salvar texto editado usando coordenadas
-  const handleSaveText = async () => {
-    if (!pdfTextSelection || !currentDocument) return;
-    
-    const input = document.querySelector('input[type="text"]') as HTMLInputElement;
-    const newText = input?.value?.trim();
-    
-    if (!newText) {
-      NotificationService.warning('Digite um texto para salvar');
-      return;
-    }
-    
-    try {
-      const loadingToastId = NotificationService.loading('Editando texto do PDF...');
-      
-      const modifiedDocument = await PDFService.editTextAtCoordinates(
-        currentDocument,
-        pdfTextSelection.pageIndex,
-        pdfTextSelection.pdfX,
-        pdfTextSelection.pdfY,
-        newText,
-        pdfTextSelection.fontSize,
-        pdfTextSelection.textWidth,
-        pdfTextSelection.textHeight
-      );
-      
-      // Atualizar documentos
-      const updatedDocuments = documents.map(doc => 
-        doc.id === currentDocument.id ? modifiedDocument : doc
-      );
-      onDocumentsUpdate(updatedDocuments);
-      
-      NotificationService.updateSuccess(loadingToastId, 'Texto editado com sucesso!');
-      
-      // Fechar editor
-      setEditingPdfText(false);
-      setPdfTextSelection(null);
-    } catch (error) {
-      console.error('Erro ao editar texto:', error);
-      NotificationService.error('Erro ao editar texto do PDF');
-    }
   };
 
   // Funções de manipulação de anotações
@@ -499,44 +423,100 @@ export default function FileViewer({ documents, currentTool, selectedPageIndex, 
         console.log('Erro: currentPageData não encontrado');
       }
     } else if (currentTool === 'edit' && !isAddingText && !editingAnnotation && !editingPdfText) {
-      // Nova implementação baseada em coordenadas (simples e eficaz)
+      // Para editar texto do PDF, vamos tentar detectar texto clicado
       e.preventDefault();
       e.stopPropagation();
       
       const rect = e.currentTarget.getBoundingClientRect();
-      const screenX = e.clientX - rect.left;
-      const screenY = e.clientY - rect.top;
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
       
-      // Obter dados da página atual para conversão de coordenadas
-      const currentPageData = currentDocument?.pages[currentPage - 1];
-      if (!currentPageData) {
-        NotificationService.error('Dados da página não encontrados');
-        return;
+      // Tentar encontrar texto na posição clicada
+      let clickedText = '';
+      let foundRect: {x: number, y: number, width: number, height: number} | null = null;
+      
+      // Método 1: Usar elementFromPoint para encontrar o elemento exato
+      const elementAtPoint = document.elementFromPoint(e.clientX, e.clientY);
+      console.log('Elemento no ponto:', elementAtPoint);
+      
+      if (elementAtPoint) {
+        const text = elementAtPoint.textContent?.trim() || '';
+        if (text && text.length > 0) {
+          const elementRect = elementAtPoint.getBoundingClientRect();
+          const containerRect = e.currentTarget.getBoundingClientRect();
+          
+          clickedText = text;
+          foundRect = {
+            x: elementRect.left - containerRect.left,
+            y: elementRect.top - containerRect.top,
+            width: elementRect.width,
+            height: elementRect.height
+          };
+          console.log('Texto encontrado via elementFromPoint:', text);
+        }
       }
       
-      // Converter coordenadas da tela para coordenadas do PDF
-      const pdfX = (screenX / rect.width) * currentPageData.width;
-      const pdfY = currentPageData.height - ((screenY / rect.height) * currentPageData.height);
+      // Método 2: Se não encontrou, tentar seletores específicos
+      if (!clickedText) {
+        const selectors = [
+          '.react-pdf__Page__textContent span',
+          '.react-pdf__Page__textContent div',
+          '.react-pdf__Page__textContent',
+          '[data-page-number] span',
+          '[data-page-number] div'
+        ];
+        
+        for (const selector of selectors) {
+          const textElements = document.querySelectorAll(selector);
+          console.log(`Tentando seletor: ${selector}, encontrados: ${textElements.length} elementos`);
+          
+          textElements.forEach((element) => {
+            const elementRect = element.getBoundingClientRect();
+            const containerRect = e.currentTarget.getBoundingClientRect();
+            
+            const relativeX = elementRect.left - containerRect.left;
+            const relativeY = elementRect.top - containerRect.top;
+            
+            // Verificar se o clique está dentro do elemento
+            if (x >= relativeX && x <= relativeX + elementRect.width &&
+                y >= relativeY && y <= relativeY + elementRect.height) {
+              const text = element.textContent?.trim() || '';
+              console.log(`Texto encontrado: "${text}"`);
+              
+              if (text && text.length > 0) {
+                clickedText = text;
+                foundRect = {
+                  x: relativeX,
+                  y: relativeY,
+                  width: elementRect.width,
+                  height: elementRect.height
+                };
+              }
+            }
+          });
+          
+          if (clickedText) break; // Se encontrou texto, parar de procurar
+        }
+      }
       
-      console.log('Coordenadas capturadas:', {
-        screen: { x: screenX, y: screenY },
-        pdf: { x: pdfX, y: pdfY },
-        page: currentPage - 1
-      });
-      
-      // Abrir editor com coordenadas capturadas
-      setPdfTextSelection({
-        text: '', // Texto vazio inicial - usuário vai digitar
-        screenX: screenX,
-        screenY: screenY,
-        pdfX: pdfX,
-        pdfY: pdfY,
-        pageIndex: currentPage - 1,
-        fontSize: 12,
-        textWidth: 100,
-        textHeight: 20
-      });
-      setEditingPdfText(true);
+      if (clickedText && foundRect) {
+        console.log('Texto detectado:', clickedText);
+        setPdfTextSelection({
+          text: clickedText,
+          x: (foundRect as {x: number, y: number, width: number, height: number}).x,
+          y: (foundRect as {x: number, y: number, width: number, height: number}).y,
+          width: (foundRect as {x: number, y: number, width: number, height: number}).width,
+          height: (foundRect as {x: number, y: number, width: number, height: number}).height,
+          pageIndex: currentPage - 1
+        });
+        setEditingPdfText(true);
+      } else {
+        console.log('Nenhum texto detectado na posição clicada');
+        console.log('Coordenadas do clique:', { x, y });
+        console.log('Elementos de texto encontrados:', document.querySelectorAll('.react-pdf__Page__textContent').length);
+        
+        NotificationService.warning('Nenhum texto detectado nesta posição. Certifique-se de que o PDF foi carregado completamente e clique diretamente sobre o texto visível.');
+      }
       
     } else {
       console.log('Clique ignorado:', { 

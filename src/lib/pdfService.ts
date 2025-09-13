@@ -1,6 +1,6 @@
 'use client';
 
-import { PDFDocument as PDFLibDocument, PDFPage as PDFLibPage, degrees } from 'pdf-lib';
+import { PDFDocument as PDFLibDocument, PDFPage as PDFLibPage, degrees, rgb } from 'pdf-lib';
 import { PDFDocument as PDFDocumentType, PDFPage, TextAnnotation } from './types';
 
 export class PDFService {
@@ -433,5 +433,70 @@ export class PDFService {
     // pdf-lib não tem getTextContent, então retornamos texto vazio
     // O texto será obtido pelo react-pdf no componente FileViewer
     return '';
+  }
+
+  /**
+   * Edita texto do PDF usando coordenadas específicas (baseado no código compartilhado)
+   * Esta é uma implementação mais robusta que usa drawRectangle + drawText
+   */
+  static async editTextAtCoordinates(
+    document: PDFDocumentType,
+    pageIndex: number,
+    pdfX: number,
+    pdfY: number,
+    newText: string,
+    fontSize: number = 12,
+    textWidth: number = 100,
+    textHeight: number = 20
+  ): Promise<PDFDocumentType> {
+    if (!document.pdfDoc) {
+      throw new Error('PDF não carregado corretamente');
+    }
+
+    try {
+      const pdfDoc = document.pdfDoc;
+      const page = pdfDoc.getPage(pageIndex);
+      
+      // Obter dimensões da página
+      const { width, height } = page.getSize();
+      
+      // 1. Desenhar um retângulo branco para "apagar" o texto antigo
+      page.drawRectangle({
+        x: pdfX,
+        y: pdfY - textHeight,
+        width: textWidth,
+        height: textHeight,
+        color: rgb(1, 1, 1), // Branco
+        borderColor: rgb(1, 1, 1),
+        borderWidth: 0
+      });
+      
+      // 2. Desenhar o novo texto na posição especificada
+      page.drawText(newText, {
+        x: pdfX,
+        y: pdfY,
+        size: fontSize,
+        color: rgb(0, 0, 0) // Preto
+      });
+      
+      // Criar uma nova instância do documento com as modificações
+      const modifiedBytes = await pdfDoc.save();
+      const modifiedPdfDoc = await PDFLibDocument.load(modifiedBytes);
+      
+      // Criar novo documento com as modificações
+      const modifiedDocument: PDFDocumentType = {
+        ...document,
+        pdfDoc: modifiedPdfDoc,
+        pages: document.pages.map((page, index) => ({
+          ...page,
+          // Não precisamos atualizar textAnnotations pois estamos editando o PDF original
+        }))
+      };
+
+      return modifiedDocument;
+    } catch (error) {
+      console.error('Erro ao editar texto do PDF:', error);
+      throw new Error('Falha ao editar texto do PDF');
+    }
   }
 }
