@@ -67,6 +67,34 @@ export default function OCRTextEditor() {
     return Math.round(400 * (zoomLevel / 100));
   };
 
+  const downloadPDF = (base64Pdf: string, fileName: string) => {
+    try {
+      // Converte base64 para blob
+      const byteCharacters = atob(base64Pdf);
+      const byteNumbers = new Array(byteCharacters.length);
+      for (let i = 0; i < byteCharacters.length; i++) {
+        byteNumbers[i] = byteCharacters.charCodeAt(i);
+      }
+      const byteArray = new Uint8Array(byteNumbers);
+      const blob = new Blob([byteArray], { type: 'application/pdf' });
+      
+      // Cria link de download
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      
+      NotificationService.success(`PDF editado baixado: ${fileName}`);
+    } catch (error) {
+      console.error('Erro ao fazer download:', error);
+      NotificationService.error('Erro ao fazer download do PDF');
+    }
+  };
+
   const handleProcessar = async () => {
     if (!pdfFile || edicoes.some(e => !e.antigo)) {
       NotificationService.warning('Preencha PDF e edições!');
@@ -90,6 +118,11 @@ export default function OCRTextEditor() {
       if (response.ok) {
         setResult(data);
         NotificationService.success('PDF processado com sucesso!');
+        
+        // Faz download do PDF editado
+        if (data.pdfBase64) {
+          downloadPDF(data.pdfBase64, data.fileName);
+        }
       } else {
         NotificationService.error(data.error || 'Erro no processamento');
       }
@@ -317,10 +350,8 @@ export default function OCRTextEditor() {
             <div className="space-y-2 text-sm">
               <p><strong className="text-green-700">Método usado:</strong> {result.metodoUsado}</p>
               <p><strong className="text-green-700">Arquivo:</strong> {result.fileName}</p>
-              <p><strong className="text-green-700">URL:</strong> 
-                <a href={result.url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 ml-1">
-                  {result.url}
-                </a>
+              <p><strong className="text-green-700">Status:</strong> 
+                <span className="text-green-600 font-semibold">✅ PDF editado baixado automaticamente!</span>
               </p>
             </div>
             

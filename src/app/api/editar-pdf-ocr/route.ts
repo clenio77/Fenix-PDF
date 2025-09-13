@@ -106,17 +106,19 @@ export async function POST(request: NextRequest) {
 
     const pdfBytes = await pdfDoc.save();
 
-    // Passo 5: Simula salvamento (em produção, salvaria no S3)
+    // Passo 5: Retorna o PDF editado como download
     const fileName = `pdf_ocr_editado_${Date.now()}.pdf`;
-    const url = `https://exemplo.com/${fileName}`;
+    
+    // Converte Uint8Array para base64 para envio
+    const base64Pdf = Buffer.from(pdfBytes).toString('base64');
 
     return NextResponse.json({
       message: 'PDF processado com OCR e editado com sucesso!',
-      url: url,
       fileName: fileName,
       metodoUsado: metodoUsado,
       textoExtraido: textoExtraido.substring(0, 500) + '...',
       textoEditado: textoEditado.substring(0, 500) + '...',
+      pdfBase64: base64Pdf, // PDF editado em base64 para download
     });
 
   } catch (error) {
