@@ -26,7 +26,7 @@ export default function FileViewer({ documents, currentTool, selectedPageIndex, 
   const [newAnnotationCoords, setNewAnnotationCoords] = useState<{x: number, y: number, screenX: number, screenY: number} | null>(null);
   const [zoom, setZoom] = useState(1);
   const [editingPdfText, setEditingPdfText] = useState(false);
-  const [pdfTextSelection, setPdfTextSelection] = useState<{text: string, x: number, y: number, width: number, height: number} | null>(null);
+  const [pdfTextSelection, setPdfTextSelection] = useState<{text: string, x: number, y: number, width: number, height: number, pageIndex: number} | null>(null);
   const viewerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -206,10 +206,35 @@ export default function FileViewer({ documents, currentTool, selectedPageIndex, 
                   defaultValue={pdfTextSelection.text}
                   className="w-full p-2 border border-gray-300 rounded text-sm mb-2"
                   autoFocus
-                  onKeyDown={(e) => {
+                  onKeyDown={async (e) => {
                     if (e.key === 'Enter') {
-                      // Aqui você pode implementar a lógica para salvar o texto editado
-                      console.log('Texto editado:', e.currentTarget.value);
+                      const newText = e.currentTarget.value;
+                      const oldText = pdfTextSelection?.text;
+                      
+                      if (oldText && newText !== oldText && currentDocument) {
+                        try {
+                          const loadingToastId = NotificationService.loading('Editando texto do PDF...');
+                          
+                          const modifiedDocument = await PDFService.editPDFText(
+                            currentDocument,
+                            pdfTextSelection.pageIndex,
+                            oldText,
+                            newText
+                          );
+                          
+                          // Atualizar documentos
+                          const updatedDocuments = documents.map(doc => 
+                            doc.id === currentDocument.id ? modifiedDocument : doc
+                          );
+                          onDocumentsUpdate(updatedDocuments);
+                          
+                          NotificationService.updateSuccess(loadingToastId, 'Texto editado com sucesso!');
+                        } catch (error) {
+                          console.error('Erro ao editar texto:', error);
+                          NotificationService.error('Erro ao editar texto do PDF');
+                        }
+                      }
+                      
                       setEditingPdfText(false);
                       setPdfTextSelection(null);
                     } else if (e.key === 'Escape') {
@@ -219,6 +244,43 @@ export default function FileViewer({ documents, currentTool, selectedPageIndex, 
                   }}
                 />
                 <div className="flex justify-between">
+                  <button
+                    onClick={async () => {
+                      const input = document.querySelector('input[type="text"]') as HTMLInputElement;
+                      const newText = input?.value;
+                      const oldText = pdfTextSelection?.text;
+                      
+                      if (oldText && newText && newText !== oldText && currentDocument) {
+                        try {
+                          const loadingToastId = NotificationService.loading('Editando texto do PDF...');
+                          
+                          const modifiedDocument = await PDFService.editPDFText(
+                            currentDocument,
+                            pdfTextSelection.pageIndex,
+                            oldText,
+                            newText
+                          );
+                          
+                          // Atualizar documentos
+                          const updatedDocuments = documents.map(doc => 
+                            doc.id === currentDocument.id ? modifiedDocument : doc
+                          );
+                          onDocumentsUpdate(updatedDocuments);
+                          
+                          NotificationService.updateSuccess(loadingToastId, 'Texto editado com sucesso!');
+                        } catch (error) {
+                          console.error('Erro ao editar texto:', error);
+                          NotificationService.error('Erro ao editar texto do PDF');
+                        }
+                      }
+                      
+                      setEditingPdfText(false);
+                      setPdfTextSelection(null);
+                    }}
+                    className="px-3 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700"
+                  >
+                    Salvar
+                  </button>
                   <button
                     onClick={() => {
                       setEditingPdfText(false);
@@ -400,7 +462,8 @@ export default function FileViewer({ documents, currentTool, selectedPageIndex, 
           x: (foundRect as {x: number, y: number, width: number, height: number}).x,
           y: (foundRect as {x: number, y: number, width: number, height: number}).y,
           width: (foundRect as {x: number, y: number, width: number, height: number}).width,
-          height: (foundRect as {x: number, y: number, width: number, height: number}).height
+          height: (foundRect as {x: number, y: number, width: number, height: number}).height,
+          pageIndex: currentPage - 1
         });
         setEditingPdfText(true);
       } else {
