@@ -483,9 +483,20 @@ export class PDFService {
       const modifiedBytes = await pdfDoc.save();
       const modifiedPdfDoc = await PDFLibDocument.load(modifiedBytes);
       
+      // Criar um novo File com o PDF modificado
+      const arrayBuffer = new ArrayBuffer(modifiedBytes.length);
+      const uint8Array = new Uint8Array(arrayBuffer);
+      uint8Array.set(modifiedBytes);
+      
+      const modifiedFile = new File([arrayBuffer], document.name, {
+        type: 'application/pdf',
+        lastModified: Date.now()
+      });
+      
       // Criar novo documento com as modificações
       const modifiedDocument: PDFDocumentType = {
         ...document,
+        file: modifiedFile, // Usar o novo arquivo modificado
         pdfDoc: modifiedPdfDoc,
         pages: document.pages.map((page, index) => ({
           ...page,

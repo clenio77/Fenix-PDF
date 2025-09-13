@@ -94,6 +94,7 @@ export default function FileViewer({ documents, currentTool, selectedPageIndex, 
         <div className="relative bg-white shadow-lg rounded-lg overflow-visible max-w-full">
           {/* Renderização do PDF usando react-pdf */}
           <Document
+            key={`pdf-${currentDocument.id}-${currentDocument.file.lastModified}`}
             file={currentDocument.file}
             onLoadSuccess={({ numPages }) => {
               // PDF carregado com sucesso
@@ -366,6 +367,9 @@ export default function FileViewer({ documents, currentTool, selectedPageIndex, 
         doc.id === currentDocument.id ? modifiedDocument : doc
       );
       onDocumentsUpdate(updatedDocuments);
+      
+      // Atualizar o documento atual para refletir as mudanças
+      setCurrentDocument(modifiedDocument);
       
       NotificationService.updateSuccess(loadingToastId, 'Texto editado com sucesso!');
       
