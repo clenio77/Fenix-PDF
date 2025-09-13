@@ -7,6 +7,7 @@ import FileUpload from '../components/FileUpload';
 import FileViewer from '../components/FileViewer';
 import FileList from '../components/FileList';
 import Toolbox from '../components/Toolbox';
+import OCRTextEditor from '../components/OCRTextEditor';
 import { PDFDocument } from '../lib/types';
 import { PDFService } from '../lib/pdfService';
 import { NotificationService } from '../lib/notifications';
@@ -225,6 +226,9 @@ export default function Home() {
                 />
               </div>
             </div>
+
+            {/* Editor OCR Card */}
+            <OCRTextEditor />
           </div>
         </div>
       </main>
