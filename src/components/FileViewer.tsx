@@ -208,22 +208,27 @@ export default function FileViewer({ documents, currentTool, selectedPageIndex, 
                 width: '300px'
               }}
             >
-              <div className="bg-white border-2 border-blue-500 rounded-lg shadow-lg p-4">
-                <div className="text-sm font-semibold text-gray-800 mb-2">
-                  ✏️ Editar Texto do PDF
+              <div className="bg-gradient-to-br from-white to-blue-50 border-2 border-blue-600 rounded-xl shadow-2xl p-5">
+                <div className="text-lg font-bold text-blue-800 mb-3 flex items-center">
+                  <span className="text-2xl mr-2">✏️</span>
+                  Editar Texto do PDF
                 </div>
-                <div className="text-xs text-blue-600 mb-3 p-2 bg-blue-50 rounded">
-                  💡 <strong>Edição Real:</strong> O texto original será coberto e substituído pelo novo texto. 
+                <div className="text-sm text-blue-700 mb-4 p-3 bg-gradient-to-r from-blue-100 to-indigo-100 rounded-lg border border-blue-200">
+                  <span className="text-lg mr-2">💡</span>
+                  <strong className="text-blue-800">Edição Real:</strong> O texto original será coberto e substituído pelo novo texto. 
                   Ajuste a largura e altura para cobrir completamente o texto antigo.
                 </div>
                 
                 {/* Campo de texto */}
-                <div className="mb-3">
-                  <label className="block text-xs text-gray-600 mb-1">Texto:</label>
+                <div className="mb-4">
+                  <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center">
+                    <span className="text-lg mr-2">📝</span>
+                    Novo Texto:
+                  </label>
                   <input
                     type="text"
-                    placeholder="Digite o novo texto..."
-                    className="w-full p-2 border border-gray-300 rounded text-sm"
+                    placeholder="Digite o novo texto aqui..."
+                    className="w-full p-3 border-2 border-blue-300 rounded-lg text-base font-medium text-gray-800 placeholder-gray-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200"
                     autoFocus
                     onKeyDown={async (e) => {
                       if (e.key === 'Enter') {
@@ -237,81 +242,93 @@ export default function FileViewer({ documents, currentTool, selectedPageIndex, 
                 </div>
                 
                 {/* Controles de posição */}
-                <div className="grid grid-cols-2 gap-2 mb-3">
-                  <div>
-                    <label className="block text-xs text-gray-600 mb-1">X:</label>
-                    <input
-                      type="number"
-                      value={pdfTextSelection.pdfX}
-                      onChange={(e) => setPdfTextSelection({
-                        ...pdfTextSelection,
-                        pdfX: parseFloat(e.target.value) || 0
-                      })}
-                      className="w-full p-1 border border-gray-300 rounded text-xs"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs text-gray-600 mb-1">Y:</label>
-                    <input
-                      type="number"
-                      value={pdfTextSelection.pdfY}
-                      onChange={(e) => setPdfTextSelection({
-                        ...pdfTextSelection,
-                        pdfY: parseFloat(e.target.value) || 0
-                      })}
-                      className="w-full p-1 border border-gray-300 rounded text-xs"
-                    />
+                <div className="mb-4">
+                  <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center">
+                    <span className="text-lg mr-2">📍</span>
+                    Posição:
+                  </label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Coordenada X:</label>
+                      <input
+                        type="number"
+                        value={pdfTextSelection.pdfX}
+                        onChange={(e) => setPdfTextSelection({
+                          ...pdfTextSelection,
+                          pdfX: parseFloat(e.target.value) || 0
+                        })}
+                        className="w-full p-2 border-2 border-green-300 rounded-lg text-sm font-medium text-gray-800 focus:border-green-500 focus:ring-2 focus:ring-green-200 transition-all duration-200"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Coordenada Y:</label>
+                      <input
+                        type="number"
+                        value={pdfTextSelection.pdfY}
+                        onChange={(e) => setPdfTextSelection({
+                          ...pdfTextSelection,
+                          pdfY: parseFloat(e.target.value) || 0
+                        })}
+                        className="w-full p-2 border-2 border-green-300 rounded-lg text-sm font-medium text-gray-800 focus:border-green-500 focus:ring-2 focus:ring-green-200 transition-all duration-200"
+                      />
+                    </div>
                   </div>
                 </div>
                 
                 {/* Controles de tamanho */}
-                <div className="grid grid-cols-3 gap-2 mb-3">
-                  <div>
-                    <label className="block text-xs text-gray-600 mb-1">Tamanho:</label>
-                    <input
-                      type="number"
-                      value={pdfTextSelection.fontSize}
-                      onChange={(e) => setPdfTextSelection({
-                        ...pdfTextSelection,
-                        fontSize: parseFloat(e.target.value) || 12
-                      })}
-                      className="w-full p-1 border border-gray-300 rounded text-xs"
-                      min="8"
-                      max="72"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs text-gray-600 mb-1">Largura:</label>
-                    <input
-                      type="number"
-                      value={pdfTextSelection.textWidth}
-                      onChange={(e) => setPdfTextSelection({
-                        ...pdfTextSelection,
-                        textWidth: parseFloat(e.target.value) || 100
-                      })}
-                      className="w-full p-1 border border-gray-300 rounded text-xs"
-                      min="20"
-                      max="500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs text-gray-600 mb-1">Altura:</label>
-                    <input
-                      type="number"
-                      value={pdfTextSelection.textHeight}
-                      onChange={(e) => setPdfTextSelection({
-                        ...pdfTextSelection,
-                        textHeight: parseFloat(e.target.value) || 20
-                      })}
-                      className="w-full p-1 border border-gray-300 rounded text-xs"
-                      min="10"
-                      max="100"
-                    />
+                <div className="mb-4">
+                  <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center">
+                    <span className="text-lg mr-2">📏</span>
+                    Dimensões:
+                  </label>
+                  <div className="grid grid-cols-3 gap-3">
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Tamanho da Fonte:</label>
+                      <input
+                        type="number"
+                        value={pdfTextSelection.fontSize}
+                        onChange={(e) => setPdfTextSelection({
+                          ...pdfTextSelection,
+                          fontSize: parseFloat(e.target.value) || 12
+                        })}
+                        className="w-full p-2 border-2 border-purple-300 rounded-lg text-sm font-medium text-gray-800 focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all duration-200"
+                        min="8"
+                        max="72"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Largura:</label>
+                      <input
+                        type="number"
+                        value={pdfTextSelection.textWidth}
+                        onChange={(e) => setPdfTextSelection({
+                          ...pdfTextSelection,
+                          textWidth: parseFloat(e.target.value) || 100
+                        })}
+                        className="w-full p-2 border-2 border-orange-300 rounded-lg text-sm font-medium text-gray-800 focus:border-orange-500 focus:ring-2 focus:ring-orange-200 transition-all duration-200"
+                        min="20"
+                        max="500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Altura:</label>
+                      <input
+                        type="number"
+                        value={pdfTextSelection.textHeight}
+                        onChange={(e) => setPdfTextSelection({
+                          ...pdfTextSelection,
+                          textHeight: parseFloat(e.target.value) || 20
+                        })}
+                        className="w-full p-2 border-2 border-orange-300 rounded-lg text-sm font-medium text-gray-800 focus:border-orange-500 focus:ring-2 focus:ring-orange-200 transition-all duration-200"
+                        min="10"
+                        max="100"
+                      />
+                    </div>
                   </div>
                 </div>
                 
                 {/* Botão para calcular área automaticamente */}
-                <div className="mb-3">
+                <div className="mb-4">
                   <button
                     onClick={() => {
                       const input = document.querySelector('input[type="text"]') as HTMLInputElement;
@@ -330,33 +347,39 @@ export default function FileViewer({ documents, currentTool, selectedPageIndex, 
                         NotificationService.success('Área de cobertura calculada automaticamente!');
                       }
                     }}
-                    className="w-full px-3 py-1 bg-green-600 text-white text-xs rounded hover:bg-green-700"
+                    className="w-full px-4 py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white text-sm font-bold rounded-lg shadow-lg hover:from-green-600 hover:to-emerald-700 transform hover:scale-105 transition-all duration-200 flex items-center justify-center"
                   >
-                    🧮 Calcular Área Automaticamente
+                    <span className="text-lg mr-2">🧮</span>
+                    Calcular Área Automaticamente
                   </button>
                 </div>
                 
                 {/* Botões de ação */}
-                <div className="flex justify-between items-center">
+                <div className="flex gap-3">
                   <button
                     onClick={handleSaveText}
-                    className="px-3 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700"
+                    className="flex-1 px-4 py-3 bg-gradient-to-r from-blue-500 to-indigo-600 text-white text-sm font-bold rounded-lg shadow-lg hover:from-blue-600 hover:to-indigo-700 transform hover:scale-105 transition-all duration-200 flex items-center justify-center"
                   >
-                    💾 Salvar
+                    <span className="text-lg mr-2">💾</span>
+                    Salvar Edição
                   </button>
                   <button
                     onClick={() => {
                       setEditingPdfText(false);
                       setPdfTextSelection(null);
                     }}
-                    className="px-3 py-1 bg-gray-500 text-white text-xs rounded hover:bg-gray-600"
+                    className="flex-1 px-4 py-3 bg-gradient-to-r from-red-500 to-pink-600 text-white text-sm font-bold rounded-lg shadow-lg hover:from-red-600 hover:to-pink-700 transform hover:scale-105 transition-all duration-200 flex items-center justify-center"
                   >
-                    ❌ Cancelar
+                    <span className="text-lg mr-2">❌</span>
+                    Cancelar
                   </button>
                 </div>
                 
-                <div className="text-xs text-gray-500 mt-2">
-                  📍 Posição: ({pdfTextSelection.pdfX.toFixed(1)}, {pdfTextSelection.pdfY.toFixed(1)})
+                <div className="mt-4 p-2 bg-gradient-to-r from-gray-100 to-gray-200 rounded-lg border border-gray-300">
+                  <div className="text-xs font-medium text-gray-700 text-center">
+                    <span className="text-sm mr-1">📍</span>
+                    <strong>Posição Atual:</strong> ({pdfTextSelection.pdfX.toFixed(1)}, {pdfTextSelection.pdfY.toFixed(1)})
+                  </div>
                 </div>
               </div>
             </div>
