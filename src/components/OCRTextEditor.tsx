@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { Document, Page } from 'react-pdf';
 import { NotificationService } from '../lib/notifications';
 
 interface Edicao {
@@ -14,6 +15,9 @@ export default function OCRTextEditor() {
   const [linguagemOCR, setLinguagemOCR] = useState('por+eng');
   const [result, setResult] = useState<any>(null);
   const [loading, setLoading] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
+  const [numPages, setNumPages] = useState<number>(0);
+  const [currentPage, setCurrentPage] = useState(1);
 
   const adicionarEdicao = () => {
     setEdicoes([...edicoes, { antigo: '', novo: '' }]);
@@ -27,6 +31,23 @@ export default function OCRTextEditor() {
 
   const removerEdicao = (index: number) => {
     setEdicoes(edicoes.filter((_, i) => i !== index));
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] || null;
+    setPdfFile(file);
+    setShowPreview(false);
+    setResult(null);
+  };
+
+  const togglePreview = () => {
+    if (pdfFile) {
+      setShowPreview(!showPreview);
+    }
+  };
+
+  const onDocumentLoadSuccess = ({ numPages }: { numPages: number }) => {
+    setNumPages(numPages);
   };
 
   const handleProcessar = async () => {
@@ -79,10 +100,80 @@ export default function OCRTextEditor() {
           <input
             type="file"
             accept=".pdf"
-            onChange={(e) => setPdfFile(e.target.files?.[0] || null)}
+            onChange={handleFileChange}
             className="w-full p-3 border-2 border-blue-300 rounded-lg text-sm font-medium text-gray-800 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200"
           />
         </div>
+
+        {/* Botão de Visualização */}
+        {pdfFile && (
+          <div className="flex justify-center">
+            <button
+              onClick={togglePreview}
+              className="px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white text-sm font-bold rounded-lg shadow-lg hover:from-green-600 hover:to-emerald-700 transform hover:scale-105 transition-all duration-200 flex items-center"
+            >
+              <span className="text-lg mr-2">
+                {showPreview ? '👁️‍🗨️' : '👁️'}
+              </span>
+              {showPreview ? 'Ocultar Visualização' : 'Visualizar PDF'}
+            </button>
+          </div>
+        )}
+
+        {/* Visualização do PDF */}
+        {showPreview && pdfFile && (
+          <div className="bg-white/10 rounded-lg border border-white/20 p-4">
+            <h4 className="text-sm font-semibold text-white mb-3 flex items-center">
+              <span className="text-lg mr-2">📄</span>
+              Visualização do PDF:
+            </h4>
+            
+            {/* Controles de navegação */}
+            {numPages > 1 && (
+              <div className="flex items-center justify-center mb-4 space-x-4">
+                <button
+                  onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                  disabled={currentPage <= 1}
+                  className="px-3 py-1 bg-blue-500 text-white text-xs font-bold rounded disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  ← Anterior
+                </button>
+                <span className="text-white text-sm font-medium">
+                  Página {currentPage} de {numPages}
+                </span>
+                <button
+                  onClick={() => setCurrentPage(Math.min(numPages, currentPage + 1))}
+                  disabled={currentPage >= numPages}
+                  className="px-3 py-1 bg-blue-500 text-white text-xs font-bold rounded disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Próxima →
+                </button>
+              </div>
+            )}
+
+            {/* Visualizador PDF */}
+            <div className="flex justify-center">
+              <div className="border-2 border-white/30 rounded-lg overflow-hidden shadow-lg">
+                <Document
+                  file={pdfFile}
+                  onLoadSuccess={onDocumentLoadSuccess}
+                >
+                  <Page
+                    pageNumber={currentPage}
+                    width={400}
+                    className="shadow-lg"
+                  />
+                </Document>
+              </div>
+            </div>
+            
+            <div className="mt-3 text-center">
+              <p className="text-xs text-white/80">
+                💡 <strong>Dica:</strong> Visualize o conteúdo para identificar o texto que deseja editar
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* Seleção de Idioma OCR */}
         <div>
