@@ -436,8 +436,8 @@ export class PDFService {
   }
 
   /**
-   * Edita texto do PDF usando coordenadas específicas (baseado no código compartilhado)
-   * Esta é uma implementação mais robusta que usa drawRectangle + drawText
+   * Edita texto do PDF usando coordenadas específicas
+   * Esta implementação usa overlay inteligente para "apagar" o texto original
    */
   static async editTextAtCoordinates(
     document: PDFDocumentType,
@@ -454,24 +454,54 @@ export class PDFService {
     }
 
     try {
-      const pdfDoc = document.pdfDoc;
+      // Criar uma nova instância do PDF para não modificar o original
+      const originalBytes = await document.pdfDoc.save();
+      const pdfDoc = await PDFLibDocument.load(originalBytes);
       const page = pdfDoc.getPage(pageIndex);
       
       // Obter dimensões da página
       const { width, height } = page.getSize();
       
-      // 1. Desenhar um retângulo branco para "apagar" o texto antigo
+      // Calcular área de cobertura baseada no tamanho do texto
+      const textLength = newText.length;
+      const estimatedWidth = Math.max(textWidth, textLength * fontSize * 0.6);
+      const estimatedHeight = Math.max(textHeight, fontSize * 1.2);
+      
+      // Desenhar múltiplas camadas de retângulos brancos para garantir cobertura completa
+      // Camada 1: Retângulo principal
       page.drawRectangle({
-        x: pdfX,
-        y: pdfY - textHeight,
-        width: textWidth,
-        height: textHeight,
+        x: pdfX - 2, // Margem extra
+        y: pdfY - estimatedHeight - 2,
+        width: estimatedWidth + 4,
+        height: estimatedHeight + 4,
         color: rgb(1, 1, 1), // Branco
         borderColor: rgb(1, 1, 1),
         borderWidth: 0
       });
       
-      // 2. Desenhar o novo texto na posição especificada
+      // Camada 2: Retângulo adicional para garantir cobertura
+      page.drawRectangle({
+        x: pdfX - 1,
+        y: pdfY - estimatedHeight - 1,
+        width: estimatedWidth + 2,
+        height: estimatedHeight + 2,
+        color: rgb(1, 1, 1), // Branco
+        borderColor: rgb(1, 1, 1),
+        borderWidth: 0
+      });
+      
+      // Camada 3: Retângulo final
+      page.drawRectangle({
+        x: pdfX,
+        y: pdfY - estimatedHeight,
+        width: estimatedWidth,
+        height: estimatedHeight,
+        color: rgb(1, 1, 1), // Branco
+        borderColor: rgb(1, 1, 1),
+        borderWidth: 0
+      });
+      
+      // Desenhar o novo texto
       page.drawText(newText, {
         x: pdfX,
         y: pdfY,
@@ -500,7 +530,9 @@ export class PDFService {
         pdfDoc: modifiedPdfDoc,
         pages: document.pages.map((page, index) => ({
           ...page,
-          // Não precisamos atualizar textAnnotations pois estamos editando o PDF original
+          // Atualizar dimensões se necessário
+          width: index === pageIndex ? width : page.width,
+          height: index === pageIndex ? height : page.height,
         }))
       };
 

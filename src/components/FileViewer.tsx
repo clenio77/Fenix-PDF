@@ -209,8 +209,12 @@ export default function FileViewer({ documents, currentTool, selectedPageIndex, 
               }}
             >
               <div className="bg-white border-2 border-blue-500 rounded-lg shadow-lg p-4">
-                <div className="text-sm font-semibold text-gray-800 mb-3">
+                <div className="text-sm font-semibold text-gray-800 mb-2">
                   ✏️ Editar Texto do PDF
+                </div>
+                <div className="text-xs text-blue-600 mb-3 p-2 bg-blue-50 rounded">
+                  💡 <strong>Edição Real:</strong> O texto original será coberto e substituído pelo novo texto. 
+                  Ajuste a largura e altura para cobrir completamente o texto antigo.
                 </div>
                 
                 {/* Campo de texto */}
@@ -304,6 +308,32 @@ export default function FileViewer({ documents, currentTool, selectedPageIndex, 
                       max="100"
                     />
                   </div>
+                </div>
+                
+                {/* Botão para calcular área automaticamente */}
+                <div className="mb-3">
+                  <button
+                    onClick={() => {
+                      const input = document.querySelector('input[type="text"]') as HTMLInputElement;
+                      const text = input?.value || '';
+                      if (text) {
+                        const textLength = text.length;
+                        const estimatedWidth = Math.max(100, textLength * pdfTextSelection.fontSize * 0.6);
+                        const estimatedHeight = Math.max(20, pdfTextSelection.fontSize * 1.2);
+                        
+                        setPdfTextSelection({
+                          ...pdfTextSelection,
+                          textWidth: estimatedWidth,
+                          textHeight: estimatedHeight
+                        });
+                        
+                        NotificationService.success('Área de cobertura calculada automaticamente!');
+                      }
+                    }}
+                    className="w-full px-3 py-1 bg-green-600 text-white text-xs rounded hover:bg-green-700"
+                  >
+                    🧮 Calcular Área Automaticamente
+                  </button>
                 </div>
                 
                 {/* Botões de ação */}
