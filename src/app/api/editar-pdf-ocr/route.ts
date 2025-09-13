@@ -66,8 +66,16 @@ export async function POST(request: NextRequest) {
     let textoEditado = textoExtraido;
     edicoes.forEach((edicao: { antigo: string; novo: string }) => {
       if (edicao.antigo && edicao.novo) {
-        const regex = new RegExp(edicao.antigo, 'gi');
-        textoEditado = textoEditado.replace(regex, edicao.novo);
+        try {
+          // Escapa caracteres especiais da regex para evitar erros
+          const textoEscapado = edicao.antigo.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          const regex = new RegExp(textoEscapado, 'gi');
+          textoEditado = textoEditado.replace(regex, edicao.novo);
+        } catch (error) {
+          console.error('Erro na regex:', error);
+          // Fallback: substituição simples sem regex
+          textoEditado = textoEditado.replace(new RegExp(edicao.antigo.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi'), edicao.novo);
+        }
       }
     });
 

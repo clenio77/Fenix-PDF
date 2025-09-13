@@ -18,6 +18,7 @@ export default function OCRTextEditor() {
   const [showPreview, setShowPreview] = useState(false);
   const [numPages, setNumPages] = useState<number>(0);
   const [currentPage, setCurrentPage] = useState(1);
+  const [zoomLevel, setZoomLevel] = useState(100);
 
   const adicionarEdicao = () => {
     setEdicoes([...edicoes, { antigo: '', novo: '' }]);
@@ -48,6 +49,22 @@ export default function OCRTextEditor() {
 
   const onDocumentLoadSuccess = ({ numPages }: { numPages: number }) => {
     setNumPages(numPages);
+  };
+
+  const handleZoomIn = () => {
+    setZoomLevel(prev => Math.min(prev + 25, 300));
+  };
+
+  const handleZoomOut = () => {
+    setZoomLevel(prev => Math.max(prev - 25, 50));
+  };
+
+  const handleZoomReset = () => {
+    setZoomLevel(100);
+  };
+
+  const calculatePageWidth = () => {
+    return Math.round(400 * (zoomLevel / 100));
   };
 
   const handleProcessar = async () => {
@@ -151,6 +168,33 @@ export default function OCRTextEditor() {
               </div>
             )}
 
+            {/* Controles de Zoom */}
+            <div className="flex items-center justify-center mb-4 space-x-2">
+              <button
+                onClick={handleZoomOut}
+                disabled={zoomLevel <= 50}
+                className="px-3 py-1 bg-red-500 text-white text-xs font-bold rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-red-600 transition-colors"
+                title="Diminuir zoom"
+              >
+                🔍−
+              </button>
+              <button
+                onClick={handleZoomReset}
+                className="px-3 py-1 bg-gray-500 text-white text-xs font-bold rounded hover:bg-gray-600 transition-colors"
+                title="Resetar zoom"
+              >
+                🔍 {zoomLevel}%
+              </button>
+              <button
+                onClick={handleZoomIn}
+                disabled={zoomLevel >= 300}
+                className="px-3 py-1 bg-green-500 text-white text-xs font-bold rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-green-600 transition-colors"
+                title="Aumentar zoom"
+              >
+                🔍+
+              </button>
+            </div>
+
             {/* Visualizador PDF */}
             <div className="flex justify-center">
               <div className="border-2 border-white/30 rounded-lg overflow-hidden shadow-lg">
@@ -160,8 +204,8 @@ export default function OCRTextEditor() {
                 >
                   <Page
                     pageNumber={currentPage}
-                    width={400}
-                    className="shadow-lg"
+                    width={calculatePageWidth()}
+                    className="shadow-lg transition-all duration-200"
                   />
                 </Document>
               </div>
@@ -169,7 +213,7 @@ export default function OCRTextEditor() {
             
             <div className="mt-3 text-center">
               <p className="text-xs text-white/80">
-                💡 <strong>Dica:</strong> Visualize o conteúdo para identificar o texto que deseja editar
+                💡 <strong>Dica:</strong> Use os controles de zoom (🔍) para visualizar melhor o texto que deseja editar
               </p>
             </div>
           </div>
