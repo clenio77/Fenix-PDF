@@ -6,7 +6,6 @@ import Footer from '../components/Footer';
 import FileUpload from '../components/FileUpload';
 import FileViewer from '../components/FileViewer';
 import FileList from '../components/FileList';
-import Toolbox from '../components/Toolbox';
 import OCRTextEditor from '../components/OCRTextEditor';
 import { PDFDocument } from '../lib/types';
 import { PDFService } from '../lib/pdfService';
@@ -17,7 +16,6 @@ import Breadcrumb from '../components/Breadcrumb';
 
 export default function Home() {
   const [documents, setDocuments] = useState<PDFDocument[]>([]);
-  const [currentTool, setCurrentTool] = useState<string>('select');
   const [selectedPageIndex, setSelectedPageIndex] = useState<number | null>(null);
   
   // Hook de histórico para undo/redo
@@ -68,7 +66,6 @@ export default function Home() {
     onUndo: canUndo ? undo : undefined,
     onRedo: canRedo ? redo : undefined,
     onSave: documents.length > 0 ? handleSaveAndDownload : undefined,
-    onSelectTool: setCurrentTool,
   });
 
   return (
@@ -190,19 +187,20 @@ export default function Home() {
 
           {/* Área Principal - Responsiva */}
           <div className="lg:col-span-3 space-y-4 sm:space-y-6">
-            {/* Toolbox Card */}
-            <div className="card fade-in-up">
+            {/* Editor de PDF com Markdown - Modal Fullscreen */}
+            <div className="card fade-in-up border-2 border-green-400 bg-green-50/10">
               <div className="card-header">
                 <h3 className="text-base font-semibold text-white flex items-center">
-                  <svg className="w-4 h-4 mr-2 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                  </svg>
-                  Ferramentas de Edição
+                  <span className="text-lg mr-2">📝</span>
+                  Editor Avançado com Markdown
+                  <span className="ml-2 px-2 py-1 bg-green-500 text-white text-xs rounded-full">NOVO</span>
                 </h3>
+                <p className="text-sm text-white/70 mt-1">
+                  Clique em "Abrir Editor Markdown" para editar em tela cheia
+                </p>
               </div>
               <div className="card-body">
-                <Toolbox currentTool={currentTool} onToolChange={setCurrentTool} />
+                <OCRTextEditor />
               </div>
             </div>
 
@@ -220,15 +218,13 @@ export default function Home() {
               <div className="card-body">
                 <FileViewer 
                   documents={documents} 
-                  currentTool={currentTool}
+                  currentTool="select"
                   selectedPageIndex={selectedPageIndex}
                   onDocumentsUpdate={setDocuments}
                 />
               </div>
             </div>
 
-            {/* Editor OCR Card */}
-            <OCRTextEditor />
           </div>
         </div>
       </main>
