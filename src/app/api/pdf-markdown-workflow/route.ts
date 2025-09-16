@@ -205,7 +205,7 @@ export async function POST(request: NextRequest) {
     // Retornar o PDF editado
     const fileName = `pdf_markdown_editado_${Date.now()}.pdf`;
     
-    return new NextResponse(pdfBuffer, {
+    return new NextResponse(new Uint8Array(pdfBuffer), {
       headers: {
         'Content-Type': 'application/pdf',
         'Content-Disposition': `attachment; filename="${fileName}"`,
