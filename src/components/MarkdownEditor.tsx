@@ -12,7 +12,7 @@ interface MarkdownEditorProps {
 export default function MarkdownEditor({ pdfFile, onClose }: MarkdownEditorProps) {
   const [markdownContent, setMarkdownContent] = useState('');
   const [loading, setLoading] = useState(false);
-  const [previewMode, setPreviewMode] = useState(false);
+  const [previewMode, setPreviewMode] = useState(false); // false = modo de edição
   const [originalMarkdown, setOriginalMarkdown] = useState('');
 
   // Carregar Markdown do PDF quando o componente é montado
@@ -268,10 +268,14 @@ export default function MarkdownEditor({ pdfFile, onClose }: MarkdownEditorProps
                 <textarea
                   id="markdown-editor"
                   value={markdownContent}
-                  onChange={(e) => setMarkdownContent(e.target.value)}
+                  onChange={(e) => {
+                    console.log('Markdown editado:', e.target.value.length, 'caracteres');
+                    setMarkdownContent(e.target.value);
+                  }}
                   className="flex-1 p-4 border-0 resize-none focus:outline-none font-mono text-sm"
                   placeholder="Digite seu conteúdo Markdown aqui..."
                   spellCheck={false}
+                  readOnly={false}
                 />
               </div>
               
