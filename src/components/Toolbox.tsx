@@ -23,7 +23,19 @@ export default function Toolbox({ currentTool, onToolChange }: ToolboxProps) {
       id: 'edit', 
       name: 'Editar Texto', 
       icon: 'M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z',
-      description: 'Editar texto existente no PDF'
+      description: 'Editar texto existente no PDF (modo inteligente)'
+    },
+    { 
+      id: 'search-edit', 
+      name: 'Buscar e Editar', 
+      icon: 'M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z',
+      description: 'Buscar texto específico e editá-lo'
+    },
+    { 
+      id: 'analyze', 
+      name: 'Analisar PDF', 
+      icon: 'M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z',
+      description: 'Analisar estrutura do PDF'
     },
   ];
 
@@ -58,7 +70,13 @@ export default function Toolbox({ currentTool, onToolChange }: ToolboxProps) {
           <p>Clique em qualquer lugar da página para adicionar uma nova anotação de texto.</p>
         )}
         {currentTool === 'edit' && (
-          <p>Clique diretamente no texto do PDF para editá-lo.</p>
+          <p>Clique diretamente no texto do PDF para editá-lo com o editor inteligente.</p>
+        )}
+        {currentTool === 'search-edit' && (
+          <p>Busque um texto específico no PDF e substitua-o por outro texto.</p>
+        )}
+        {currentTool === 'analyze' && (
+          <p>Analise a estrutura do PDF para obter informações sobre formatação e texto.</p>
         )}
       </div>
     </div>

@@ -6,6 +6,7 @@ import { PDFDocument, TextAnnotation } from '../lib/types';
 import { PDFService } from '../lib/pdfService';
 import { NotificationService } from '../lib/notifications';
 import TextEditor from './TextEditor';
+import SmartTextEditor from './SmartTextEditor';
 
 // Configurar o worker do PDF.js
 pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
@@ -37,6 +38,7 @@ export default function FileViewer({ documents, currentTool, selectedPageIndex, 
     textWidth: number,
     textHeight: number
   } | null>(null);
+  const [smartEditorMode, setSmartEditorMode] = useState<'search' | 'coordinates' | 'detect' | null>(null);
   const viewerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -198,8 +200,48 @@ export default function FileViewer({ documents, currentTool, selectedPageIndex, 
             </div>
           )}
 
-          {/* Editor de texto do PDF baseado em coordenadas */}
-          {editingPdfText && pdfTextSelection && (
+          {/* SmartTextEditor - Editor Inteligente */}
+          {smartEditorMode && currentDocument && pdfTextSelection && (
+            <div
+              className="absolute z-40"
+              style={{
+                left: `${pdfTextSelection.screenX}px`,
+                top: `${pdfTextSelection.screenY}px`,
+                transform: 'translate(-50%, -50%)'
+              }}
+            >
+              <SmartTextEditor
+                document={currentDocument}
+                pageIndex={pdfTextSelection.pageIndex}
+                initialX={pdfTextSelection.pdfX}
+                initialY={pdfTextSelection.pdfY}
+                mode={smartEditorMode}
+                onSave={(result) => {
+                  if (result.success) {
+                    // Atualizar documentos
+                    const updatedDocuments = documents.map(doc => 
+                      doc.id === currentDocument.id ? result.modifiedDocument : doc
+                    );
+                    onDocumentsUpdate(updatedDocuments);
+                    
+                    // Atualizar o documento atual
+                    setCurrentDocument(result.modifiedDocument);
+                    
+                    // Fechar editor
+                    setSmartEditorMode(null);
+                    setPdfTextSelection(null);
+                  }
+                }}
+                onCancel={() => {
+                  setSmartEditorMode(null);
+                  setPdfTextSelection(null);
+                }}
+              />
+            </div>
+          )}
+
+          {/* Editor antigo (mantido para compatibilidade) */}
+          {editingPdfText && pdfTextSelection && !smartEditorMode && (
             <div
               className="absolute z-40"
               style={{
@@ -211,7 +253,7 @@ export default function FileViewer({ documents, currentTool, selectedPageIndex, 
               <div className="bg-gradient-to-br from-white to-blue-50 border-2 border-blue-600 rounded-xl shadow-2xl p-5">
                 <div className="text-lg font-bold text-blue-800 mb-3 flex items-center">
                   <span className="text-2xl mr-2">✏️</span>
-                  Editar Texto do PDF
+                  Editar Texto do PDF (Modo Legado)
                 </div>
                 <div className="text-sm text-blue-700 mb-4 p-3 bg-gradient-to-r from-blue-100 to-indigo-100 rounded-lg border border-blue-200">
                   <span className="text-lg mr-2">💡</span>
@@ -555,8 +597,8 @@ export default function FileViewer({ documents, currentTool, selectedPageIndex, 
       } else {
         console.log('Erro: currentPageData não encontrado');
       }
-    } else if (currentTool === 'edit' && !isAddingText && !editingAnnotation && !editingPdfText) {
-      // Nova implementação baseada em coordenadas (simples e eficaz)
+    } else if ((currentTool === 'edit' || currentTool === 'search-edit' || currentTool === 'analyze') && !isAddingText && !editingAnnotation && !editingPdfText && !smartEditorMode) {
+      // Nova implementação com SmartTextEditor
       e.preventDefault();
       e.stopPropagation();
       
@@ -578,10 +620,21 @@ export default function FileViewer({ documents, currentTool, selectedPageIndex, 
       console.log('Coordenadas capturadas:', {
         screen: { x: screenX, y: screenY },
         pdf: { x: pdfX, y: pdfY },
-        page: currentPage - 1
+        page: currentPage - 1,
+        tool: currentTool
       });
       
-      // Abrir editor com coordenadas capturadas
+      // Determinar modo do SmartTextEditor baseado na ferramenta
+      let editorMode: 'search' | 'coordinates' | 'detect';
+      if (currentTool === 'search-edit') {
+        editorMode = 'search';
+      } else if (currentTool === 'analyze') {
+        editorMode = 'detect';
+      } else {
+        editorMode = 'coordinates';
+      }
+      
+      // Abrir SmartTextEditor no modo apropriado
       setPdfTextSelection({
         text: '', // Texto vazio inicial - usuário vai digitar
         screenX: screenX,
@@ -593,7 +646,7 @@ export default function FileViewer({ documents, currentTool, selectedPageIndex, 
         textWidth: 100,
         textHeight: 20
       });
-      setEditingPdfText(true);
+      setSmartEditorMode(editorMode);
       
     } else {
       console.log('Clique ignorado:', { 
