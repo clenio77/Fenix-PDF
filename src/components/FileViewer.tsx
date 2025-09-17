@@ -7,6 +7,7 @@ import { PDFService } from '../lib/pdfService';
 import { NotificationService } from '../lib/notifications';
 import TextEditor from './TextEditor';
 import SmartTextEditor from './SmartTextEditor';
+import PDFDebugger from './PDFDebugger';
 
 // Configurar o worker do PDF.js
 pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
@@ -39,6 +40,8 @@ export default function FileViewer({ documents, currentTool, selectedPageIndex, 
     textHeight: number
   } | null>(null);
   const [smartEditorMode, setSmartEditorMode] = useState<'search' | 'coordinates' | 'detect' | null>(null);
+  const [pdfLoading, setPdfLoading] = useState(false);
+  const [pdfError, setPdfError] = useState<string | null>(null);
   const viewerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -50,6 +53,8 @@ export default function FileViewer({ documents, currentTool, selectedPageIndex, 
     if (total === 0) {
       setCurrentPage(1);
       setCurrentDocument(null);
+      setPdfLoading(false);
+      setPdfError(null);
     }
     
     // Se houver um índice de página selecionado, mostrar essa página
@@ -63,15 +68,33 @@ export default function FileViewer({ documents, currentTool, selectedPageIndex, 
       for (const doc of documents) {
         if (selectedPageIndex !== null && selectedPageIndex >= pageCount && selectedPageIndex < pageCount + doc.pages.length) {
           setCurrentDocument(doc);
+          // Iniciar carregamento quando um novo documento é selecionado
+          if (doc !== currentDocument) {
+            setPdfLoading(true);
+            setPdfError(null);
+          }
           break;
         }
         pageCount += doc.pages.length;
       }
     }
-  }, [documents, selectedPageIndex]);
+  }, [documents, selectedPageIndex, currentDocument]);
 
   // Função para renderizar o conteúdo do PDF
   const renderPDFContent = () => {
+    console.log('Renderizando PDF:', {
+      documentsCount: documents.length,
+      currentDocument: currentDocument ? {
+        id: currentDocument.id,
+        name: currentDocument.name,
+        fileSize: currentDocument.file.size,
+        fileType: currentDocument.file.type,
+        pagesCount: currentDocument.pages.length
+      } : null,
+      currentPage: currentPage,
+      totalPages: totalPages
+    });
+
     if (documents.length === 0) {
       return (
         <div className="flex items-center justify-center h-full">
@@ -88,21 +111,69 @@ export default function FileViewer({ documents, currentTool, selectedPageIndex, 
       );
     }
 
+    if (!currentDocument.file) {
+      return (
+        <div className="flex items-center justify-center h-full">
+          <p className="text-gray-500">Arquivo PDF não encontrado</p>
+        </div>
+      );
+    }
+
     const currentPageIndex = currentPage - 1;
     const currentPageData = currentDocument.pages[currentPageIndex];
 
     return (
       <div className="flex flex-col items-center p-4">
         <div className="relative bg-white shadow-lg rounded-lg overflow-visible max-w-full">
+          {/* Indicador de carregamento */}
+          {pdfLoading && (
+            <div className="absolute inset-0 bg-white bg-opacity-90 flex items-center justify-center z-10">
+              <div className="text-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                <p className="text-gray-600">Carregando PDF...</p>
+              </div>
+            </div>
+          )}
+
+          {/* Indicador de erro */}
+          {pdfError && (
+            <div className="absolute inset-0 bg-white bg-opacity-90 flex items-center justify-center z-10">
+              <div className="text-center p-4">
+                <div className="text-red-500 text-4xl mb-4">⚠️</div>
+                <p className="text-red-600 font-semibold mb-2">Erro ao carregar PDF</p>
+                <p className="text-gray-600 text-sm">{pdfError}</p>
+                <button
+                  onClick={() => {
+                    setPdfError(null);
+                    setPdfLoading(true);
+                  }}
+                  className="mt-4 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+                >
+                  Tentar novamente
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Renderização do PDF usando react-pdf */}
           <Document
             key={`pdf-${currentDocument.id}-${currentDocument.file.lastModified}`}
             file={currentDocument.file}
             onLoadSuccess={({ numPages }) => {
-              // PDF carregado com sucesso
+              console.log('PDF carregado com sucesso:', { numPages, fileName: currentDocument.name });
+              setPdfLoading(false);
+              setPdfError(null);
             }}
             onLoadError={(error) => {
               console.error('Erro ao carregar PDF:', error);
+              console.error('Detalhes do erro:', {
+                message: error.message,
+                fileName: currentDocument.name,
+                fileSize: currentDocument.file.size,
+                fileType: currentDocument.file.type
+              });
+              setPdfLoading(false);
+              setPdfError(`Erro ao carregar PDF: ${error.message}`);
             }}
           >
             <Page
@@ -110,6 +181,21 @@ export default function FileViewer({ documents, currentTool, selectedPageIndex, 
               width={Math.min(600 * zoom, window.innerWidth * 0.6)}
               renderTextLayer={true}
               renderAnnotationLayer={false}
+              onLoadSuccess={(page) => {
+                console.log('Página carregada com sucesso:', {
+                  pageNumber: currentPage,
+                  width: Math.min(600 * zoom, window.innerWidth * 0.6),
+                  zoom: zoom
+                });
+              }}
+              onLoadError={(error) => {
+                console.error('Erro ao carregar página:', error);
+                console.error('Detalhes da página:', {
+                  pageNumber: currentPage,
+                  width: Math.min(600 * zoom, window.innerWidth * 0.6),
+                  zoom: zoom
+                });
+              }}
             />
           </Document>
           
@@ -724,6 +810,13 @@ export default function FileViewer({ documents, currentTool, selectedPageIndex, 
       <div className="flex-grow overflow-auto">
         {renderPDFContent()}
       </div>
+
+      {/* Debugger - remover em produção */}
+      {currentDocument && (
+        <div className="mt-4">
+          <PDFDebugger document={currentDocument} />
+        </div>
+      )}
       
     </div>
   );
