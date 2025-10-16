@@ -59,7 +59,7 @@ export default function FileUpload({ onFilesUploaded }: FileUploadProps) {
       
       for (const file of validFiles) {
         try {
-          const document = await PDFService.loadPDF(file);
+          const document = PDFService.createInitialDocument(file);
           newDocuments.push(document);
         } catch (error) {
           console.error(`Erro ao carregar ${file.name}:`, error);
