@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { Document, Page, pdfjs } from 'react-pdf';
-import type { PDFDocumentProxy } from 'pdfjs-dist';
 import { PDFDocument as PDFDocumentType } from '../lib/types';
 import { NotificationService } from '../lib/notifications';
 import { PDFService } from '../lib/pdfService';
@@ -55,7 +54,7 @@ export default function FileViewer({ documents, currentTool, selectedPageIndex, 
     }
   }, [documents, selectedPageIndex]);
 
-  const onDocumentLoadSuccess = useCallback((pdf: PDFDocumentProxy) => {
+  const onDocumentLoadSuccess = useCallback((pdf: any) => {
     console.log('PDF carregado com sucesso:', {
       numPages: pdf.numPages,
       fingerprint: pdf.fingerprints?.[0],
@@ -93,9 +92,9 @@ export default function FileViewer({ documents, currentTool, selectedPageIndex, 
 
   const onDocumentLoadError = useCallback((error: Error) => {
     console.error('Falha ao carregar o PDF:', error);
-    console.error('Detalhes do erro:', {
+              console.error('Detalhes do erro:', {
       name: error.name,
-      message: error.message,
+                message: error.message,
       stack: error.stack,
       documentName: currentDocument?.name,
       documentSize: currentDocument?.size
@@ -133,7 +132,7 @@ Detalhes técnicos: ${error.message}`;
     if (!confirmDelete) {
       return;
     }
-
+    
     try {
       // Mostrar loading
       NotificationService.loading("Deletando página...");
@@ -159,7 +158,7 @@ Detalhes técnicos: ${error.message}`;
       );
 
       onDocumentsUpdate(updatedDocuments);
-
+      
       // Ajustar a página atual se necessário
       const newTotalPages = totalPages - 1;
       if (currentPage > newTotalPages) {
@@ -198,40 +197,40 @@ Detalhes técnicos: ${error.message}`;
         <div className="flex items-center space-x-4">
           {/* Controles de Zoom */}
           <div className="flex items-center space-x-2">
-            <button 
+                        <button
               onClick={() => setZoom(z => Math.max(0.5, z - 0.2))} 
               disabled={zoom <= 0.5} 
               className="px-2 py-1 rounded hover:bg-gray-700 disabled:opacity-50"
-            >
-              -
-            </button>
+                        >
+                          -
+                        </button>
             <span className="w-16 text-center">{Math.round(zoom * 100)}%</span>
-            <button 
+              <button
               onClick={() => setZoom(z => Math.min(3, z + 0.2))} 
-              disabled={zoom >= 3} 
+                disabled={zoom >= 3}
               className="px-2 py-1 rounded hover:bg-gray-700 disabled:opacity-50"
-            >
-              +
-            </button>
-          </div>
+              >
+                +
+              </button>
+            </div>
           {/* Navegação de Página */}
           <div className="flex items-center space-x-2">
-            <button 
+              <button
               onClick={() => changePage(-1)} 
-              disabled={currentPage <= 1} 
+                disabled={currentPage <= 1}
               className="px-2 py-1 rounded hover:bg-gray-700 disabled:opacity-50"
-            >
+              >
               ‹ Anterior
-            </button>
+              </button>
             <span>{currentPage} / {totalPages || '--'}</span>
-            <button 
+              <button
               onClick={() => changePage(1)} 
-              disabled={currentPage >= totalPages} 
+                disabled={currentPage >= totalPages}
               className="px-2 py-1 rounded hover:bg-gray-700 disabled:opacity-50"
-            >
+              >
               Próxima ›
-            </button>
-          </div>
+              </button>
+            </div>
           {/* Botão de Deletar Página */}
           <div className="flex items-center space-x-2">
             <button 
@@ -302,10 +301,6 @@ Detalhes técnicos: ${error.message}`;
                     );
                     onDocumentsUpdate(updatedDocuments);
                   }
-                }}
-                onRenderError={(error) => {
-                  console.error(`Erro ao renderizar página ${currentPage}:`, error);
-                  NotificationService.error(`Erro ao renderizar página ${currentPage}`);
                 }}
               />
             </Document>
