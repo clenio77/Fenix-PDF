@@ -38,15 +38,11 @@ export class EnhancedPDFService {
     newText: string,
     options: EditTextOptions = {}
   ): Promise<TextEditResult> {
-    if (!document.pdfDoc) {
-      return {
-        success: false,
-        message: 'PDF não carregado corretamente',
-        modifiedDocument: document
-      };
-    }
-
     try {
+      // Carregar o PDF dinamicamente
+      const fileBuffer = await document.file.arrayBuffer();
+      const loadedPdfDoc = await PDFLibDocument.load(fileBuffer);
+      
       const {
         preserveFormatting = true,
         autoDetectFont = true,
@@ -56,7 +52,7 @@ export class EnhancedPDFService {
 
       // Buscar o texto no PDF
       const searchResult = await PDFTextAnalyzer.getTextBoundingBox(
-        document.pdfDoc,
+        loadedPdfDoc,
         pageIndex,
         searchText
       );

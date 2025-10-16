@@ -35,8 +35,8 @@ export class PDFService {
       pdfDoc.addPage(); // Adiciona uma página em branco
 
       const pdfBytes = await pdfDoc.save();
-      const outputBuffer = pdfBytes.buffer.slice(0);
-      return new File([outputBuffer], file.name, { type: 'application/pdf' });
+      const uint8Array = new Uint8Array(pdfBytes);
+      return new File([uint8Array], file.name, { type: 'application/pdf' });
 
     } catch (error) {
       console.error("Erro ao adicionar página em branco:", error);
@@ -66,8 +66,8 @@ export class PDFService {
       pdfDoc.removePage(pageIndex); // Remove a página
 
       const pdfBytes = await pdfDoc.save();
-      const outputBuffer = pdfBytes.buffer.slice(0);
-      return new File([outputBuffer], file.name, { type: 'application/pdf' });
+      const uint8Array = new Uint8Array(pdfBytes);
+      return new File([uint8Array], file.name, { type: 'application/pdf' });
 
     } catch (error) {
       console.error("Erro ao deletar página:", error);
@@ -112,7 +112,8 @@ export class PDFService {
       });
 
       const modifiedBytes = await pdfDoc.save();
-      return new File([modifiedBytes], file.name, { type: 'application/pdf' });
+      const uint8Array = new Uint8Array(modifiedBytes);
+      return new File([uint8Array], file.name, { type: 'application/pdf' });
 
     } catch (error) {
       console.error('Erro ao editar texto do PDF:', error);
@@ -385,32 +386,28 @@ export class PDFService {
       return {
         useObjectStreams: true,
         objectsPerTick: 100,
-        updateFieldAppearances: false,
-        removeDefaultPage: false
+        updateFieldAppearances: false
       };
     } else if (quality >= 0.6) {
       // Compressão média - equilíbrio
       return {
         useObjectStreams: true,
         objectsPerTick: 75,
-        updateFieldAppearances: false,
-        removeDefaultPage: true
+        updateFieldAppearances: false
       };
     } else if (quality >= 0.4) {
       // Alta compressão - redução significativa
       return {
         useObjectStreams: true,
         objectsPerTick: 50,
-        updateFieldAppearances: true,
-        removeDefaultPage: true
+        updateFieldAppearances: true
       };
     } else {
       // Compressão máxima - máxima redução
       return {
         useObjectStreams: true,
         objectsPerTick: 25,
-        updateFieldAppearances: true,
-        removeDefaultPage: true
+        updateFieldAppearances: true
       };
     }
   }
@@ -435,8 +432,7 @@ export class PDFService {
         useObjectStreams: compressionConfig.useObjectStreams,
         addDefaultPage: false,
         objectsPerTick: compressionConfig.objectsPerTick,
-        updateFieldAppearances: compressionConfig.updateFieldAppearances,
-        removeDefaultPage: compressionConfig.removeDefaultPage
+        updateFieldAppearances: compressionConfig.updateFieldAppearances
       });
       
       // Criar um novo File com o PDF comprimido
