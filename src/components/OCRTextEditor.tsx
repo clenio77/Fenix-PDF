@@ -1,177 +1,64 @@
 'use client';
 
 import { useState } from 'react';
-import { Document, Page } from 'react-pdf';
-import { NotificationService } from '../lib/notifications';
+import { PDFDocument } from '../lib/types';
 import MarkdownEditor from './MarkdownEditor';
 
+interface OCRTextEditorProps {
+  documents: PDFDocument[];
+  selectedPageIndex: number | null;
+}
 
-export default function OCRTextEditor() {
-  const [pdfFile, setPdfFile] = useState<File | null>(null);
-  const [showPreview, setShowPreview] = useState(false);
-  const [numPages, setNumPages] = useState<number>(0);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [zoomLevel, setZoomLevel] = useState(100);
+export default function OCRTextEditor({ documents, selectedPageIndex }: OCRTextEditorProps) {
   const [showMarkdownEditor, setShowMarkdownEditor] = useState(false);
 
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0] || null;
-    setPdfFile(file);
-    setShowPreview(false);
-  };
-
-  const togglePreview = () => {
-    if (pdfFile) {
-      setShowPreview(!showPreview);
+  // Encontrar o documento atual baseado na página selecionada
+  const getCurrentDocument = () => {
+    if (!documents.length || selectedPageIndex === null) return null;
+    
+    let pageCount = 0;
+    for (const doc of documents) {
+      if (selectedPageIndex >= pageCount && selectedPageIndex < pageCount + doc.pages.length) {
+        return doc;
+      }
+      pageCount += doc.pages.length;
     }
+    return null;
   };
 
-  const onDocumentLoadSuccess = ({ numPages }: { numPages: number }) => {
-    setNumPages(numPages);
-  };
-
-  const handleZoomIn = () => {
-    setZoomLevel(prev => Math.min(prev + 25, 300));
-  };
-
-  const handleZoomOut = () => {
-    setZoomLevel(prev => Math.max(prev - 25, 50));
-  };
-
-  const handleZoomReset = () => {
-    setZoomLevel(100);
-  };
-
-  const calculatePageWidth = () => {
-    return Math.round(400 * (zoomLevel / 100));
-  };
+  const currentDocument = getCurrentDocument();
 
 
 
   return (
-    <div className="card fade-in-up">
+    <div className="card fade-in-up border-2 border-green-400 bg-green-50/10">
       <div className="card-header">
         <h3 className="text-base font-semibold text-white flex items-center">
           <span className="text-lg mr-2">📝</span>
-          Editor de PDF com Markdown
+          Editor Avançado com Markdown
+          <span className="ml-2 px-2 py-1 bg-green-500 text-white text-xs rounded-full">NOVO</span>
         </h3>
+        <p className="text-sm text-white/70 mt-1">
+          Edite PDFs selecionados no sidebar usando Markdown
+        </p>
       </div>
-      <div className="card-body space-y-6">
-        {/* Upload de PDF */}
-        <div>
-          <label className="block text-sm font-medium text-white mb-2">
-            📄 PDF para Edição:
-          </label>
-          <input
-            type="file"
-            accept=".pdf"
-            onChange={handleFileChange}
-            className="w-full p-3 border-2 border-blue-300 rounded-lg text-sm font-medium text-gray-800 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200"
-          />
-        </div>
-
-        {/* Botão de Visualização */}
-        {pdfFile && (
-          <div className="flex justify-center">
-            <button
-              onClick={togglePreview}
-              className="px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white text-sm font-bold rounded-lg shadow-lg hover:from-green-600 hover:to-emerald-700 transform hover:scale-105 transition-all duration-200 flex items-center"
-            >
-              <span className="text-lg mr-2">
-                {showPreview ? '👁️‍🗨️' : '👁️'}
-              </span>
-              {showPreview ? 'Ocultar Visualização' : 'Visualizar PDF'}
-            </button>
-          </div>
-        )}
-
-        {/* Visualização do PDF */}
-        {showPreview && pdfFile && (
-          <div className="bg-white/10 rounded-lg border border-white/20 p-4">
-            <h4 className="text-sm font-semibold text-white mb-3 flex items-center">
-              <span className="text-lg mr-2">📄</span>
-              Visualização do PDF:
-            </h4>
-            
-            {/* Controles de navegação */}
-            {numPages > 1 && (
-              <div className="flex items-center justify-center mb-4 space-x-4">
-                <button
-                  onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-                  disabled={currentPage <= 1}
-                  className="px-3 py-1 bg-blue-500 text-white text-xs font-bold rounded disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  ← Anterior
-                </button>
-                <span className="text-white text-sm font-medium">
-                  Página {currentPage} de {numPages}
-                </span>
-                <button
-                  onClick={() => setCurrentPage(Math.min(numPages, currentPage + 1))}
-                  disabled={currentPage >= numPages}
-                  className="px-3 py-1 bg-blue-500 text-white text-xs font-bold rounded disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Próxima →
-                </button>
-              </div>
-            )}
-
-            {/* Controles de Zoom */}
-            <div className="flex items-center justify-center mb-4 space-x-2">
-              <button
-                onClick={handleZoomOut}
-                disabled={zoomLevel <= 50}
-                className="px-3 py-1 bg-red-500 text-white text-xs font-bold rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-red-600 transition-colors"
-                title="Diminuir zoom"
-              >
-                🔍−
-              </button>
-              <button
-                onClick={handleZoomReset}
-                className="px-3 py-1 bg-gray-500 text-white text-xs font-bold rounded hover:bg-gray-600 transition-colors"
-                title="Resetar zoom"
-              >
-                🔍 {zoomLevel}%
-              </button>
-              <button
-                onClick={handleZoomIn}
-                disabled={zoomLevel >= 300}
-                className="px-3 py-1 bg-green-500 text-white text-xs font-bold rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-green-600 transition-colors"
-                title="Aumentar zoom"
-              >
-                🔍+
-              </button>
-            </div>
-
-            {/* Visualizador PDF */}
-            <div className="flex justify-center">
-              <div className="border-2 border-white/30 rounded-lg overflow-hidden shadow-lg">
-                <Document
-                  file={pdfFile}
-                  onLoadSuccess={onDocumentLoadSuccess}
-                >
-                  <Page
-                    pageNumber={currentPage}
-                    width={calculatePageWidth()}
-                    className="shadow-lg transition-all duration-200"
-                  />
-                </Document>
+      <div className="card-body">
+        {currentDocument ? (
+          <div className="space-y-4">
+            {/* Informações do documento atual */}
+            <div className="bg-white/10 rounded-lg p-4">
+              <h4 className="text-sm font-semibold text-white mb-2 flex items-center">
+                <span className="text-lg mr-2">📄</span>
+                Documento Selecionado:
+              </h4>
+              <div className="text-sm text-white/80 space-y-1">
+                <p><strong>Nome:</strong> {currentDocument.name}</p>
+                <p><strong>Páginas:</strong> {currentDocument.pages.length}</p>
+                <p><strong>Tamanho:</strong> {(currentDocument.size / 1024 / 1024).toFixed(2)} MB</p>
               </div>
             </div>
-            
-            <div className="mt-3 text-center">
-              <p className="text-xs text-white/80">
-                💡 <strong>Dica:</strong> Use os controles de zoom (🔍) para visualizar melhor o conteúdo antes de editar em Markdown
-              </p>
-            </div>
-          </div>
-        )}
 
-
-        {/* Botão para Abrir Editor Markdown */}
-        {pdfFile && (
-          <div>
+            {/* Botão para Abrir Editor Markdown */}
             <div className="text-center">
               <button
                 onClick={() => setShowMarkdownEditor(true)}
@@ -181,18 +68,27 @@ export default function OCRTextEditor() {
                 Abrir Editor Markdown
               </button>
             </div>
-            <div className="mt-3 text-center text-xs text-white/70">
+            
+            <div className="text-center text-xs text-white/70">
               💡 <strong>Edição Avançada:</strong> Converta PDF para Markdown, edite com formatação completa e salve como PDF
             </div>
           </div>
+        ) : (
+          <div className="text-center py-8">
+            <svg className="w-16 h-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            <p className="text-gray-400 text-sm mb-2">Nenhum documento selecionado</p>
+            <p className="text-gray-500 text-xs">
+              Selecione um documento no sidebar para começar a editar
+            </p>
+          </div>
         )}
 
-
-
         {/* Editor Markdown */}
-        {showMarkdownEditor && pdfFile && (
+        {showMarkdownEditor && currentDocument && (
           <MarkdownEditor 
-            pdfFile={pdfFile} 
+            pdfFile={currentDocument.file} 
             onClose={() => setShowMarkdownEditor(false)} 
           />
         )}

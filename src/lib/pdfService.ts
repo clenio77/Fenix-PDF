@@ -1,66 +1,121 @@
 'use client';
 
-import { PDFDocument as PDFLibDocument, PDFPage as PDFLibPage, degrees, rgb } from 'pdf-lib';
-import { PDFDocument as PDFDocumentType, PDFPage, TextAnnotation } from './types';
+import { PDFDocument as PDFLibDocument, degrees, rgb } from 'pdf-lib';
+import { PDFDocument as PDFDocumentType, PDFPage } from './types';
 
+/**
+ * PDFService focado exclusivamente em MANIPULAÇÃO de PDFs.
+ * O carregamento para visualização é de responsabilidade do componente com react-pdf.
+ */
 export class PDFService {
-  // Cache para gerenciar instâncias de PDF e evitar vazamentos de memória
-  private static pdfCache = new Map<string, any>();
-  private static readonly MAX_CACHE_SIZE = 10;
-  
-  // Force redeploy - fix Vercel cache issue
+
   /**
-   * Carrega um arquivo PDF e retorna um objeto PDFDocument
+   * Cria uma estrutura de documento inicial a partir de um arquivo, sem carregar
+   * a instância de pdf-lib na memória, que agora é feita sob demanda.
    */
-  static async loadPDF(file: File): Promise<PDFDocumentType> {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = async (e) => {
-        try {
-          const arrayBuffer = e.target?.result as ArrayBuffer;
-          if (!arrayBuffer) {
-            throw new Error('Erro ao ler arquivo');
-          }
+  static createInitialDocument(file: File): PDFDocumentType {
+    return {
+      id: `doc-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      name: file.name,
+      size: file.size,
+      pages: [], // As páginas serão descobertas pelo FileViewer
+      file: file,
+    };
+  }
 
-          const pdfDoc = await PDFLibDocument.load(arrayBuffer);
-          const pages: PDFPage[] = [];
+  /**
+   * Exemplo de função de MANIPULAÇÃO. Carrega o PDF com pdf-lib,
+   * executa uma ação e retorna um novo objeto File.
+   */
+  static async addBlankPage(file: File): Promise<File> {
+    try {
+      const arrayBuffer = await file.arrayBuffer();
+      const pdfDoc = await PDFLibDocument.load(arrayBuffer);
 
-          for (let i = 0; i < pdfDoc.getPageCount(); i++) {
-            const page = pdfDoc.getPage(i);
-            const { width, height } = page.getSize();
-            
-            pages.push({
-              id: `page-${Date.now()}-${i}`,
-              index: i,
-              rotation: 0,
-              textAnnotations: [],
-              width,
-              height
-            });
-          }
+      pdfDoc.addPage(); // Adiciona uma página em branco
 
-          const documentId = `doc-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-          
-          const document: PDFDocumentType = {
-            id: documentId,
-            name: file.name,
-            size: file.size,
-            pages,
-            file: file,
-            pdfDoc // Armazenar a instância do PDFLib para manipulações futuras
-          };
-          
-          // Gerenciar cache de memória
-          PDFService.manageCache(documentId, pdfDoc);
-          
-          resolve(document);
-        } catch (error) {
-          reject(error);
-        }
-      };
-      reader.onerror = () => reject(new Error('Erro ao ler arquivo'));
-      reader.readAsArrayBuffer(file);
-    });
+      const pdfBytes = await pdfDoc.save();
+      return new File([pdfBytes], file.name, { type: 'application/pdf' });
+
+    } catch (error) {
+      console.error("Erro ao adicionar página em branco:", error);
+      throw new Error("Não foi possível adicionar a página.");
+    }
+  }
+
+  /**
+   * Deleta uma página específica do PDF. Carrega o PDF, remove a página
+   * e retorna um novo objeto File.
+   */
+  static async deletePage(file: File, pageIndex: number): Promise<File> {
+    try {
+      const arrayBuffer = await file.arrayBuffer();
+      const pdfDoc = await PDFLibDocument.load(arrayBuffer);
+
+      // Verificar se a página existe
+      if (pageIndex < 0 || pageIndex >= pdfDoc.getPageCount()) {
+        throw new Error(`Página ${pageIndex + 1} não existe no documento`);
+      }
+
+      // Verificar se não é a última página (pelo menos 1 página deve permanecer)
+      if (pdfDoc.getPageCount() <= 1) {
+        throw new Error("Não é possível deletar a última página do documento");
+      }
+
+      pdfDoc.removePage(pageIndex); // Remove a página
+
+      const pdfBytes = await pdfDoc.save();
+      return new File([pdfBytes], file.name, { type: 'application/pdf' });
+
+    } catch (error) {
+      console.error("Erro ao deletar página:", error);
+      throw new Error(`Não foi possível deletar a página: ${(error as Error).message}`);
+    }
+  }
+
+  /**
+   * Edita texto em coordenadas específicas. Carrega o PDF, aplica a modificação
+   * e retorna um novo objeto File.
+   */
+  static async editTextAtCoordinates(
+    file: File,
+    pageIndex: number,
+    pdfX: number,
+    pdfY: number,
+    newText: string,
+    fontSize: number = 12,
+    textWidth: number = 100,
+    textHeight: number = 20
+  ): Promise<File> {
+    try {
+      const arrayBuffer = await file.arrayBuffer();
+      const pdfDoc = await PDFLibDocument.load(arrayBuffer);
+      const page = pdfDoc.getPage(pageIndex);
+
+      // "Apaga" o texto antigo desenhando um retângulo branco sobre ele
+      page.drawRectangle({
+        x: pdfX,
+        y: pdfY - textHeight, // Ajuste de coordenada
+        width: textWidth,
+        height: textHeight,
+        color: rgb(1, 1, 1), // Branco
+      });
+
+      // Desenha o novo texto
+      page.drawText(newText, {
+        x: pdfX,
+        y: pdfY,
+        size: fontSize,
+        color: rgb(0, 0, 0), // Preto
+      });
+
+      const modifiedBytes = await pdfDoc.save();
+      return new File([modifiedBytes], file.name, { type: 'application/pdf' });
+
+    } catch (error) {
+      console.error('Erro ao editar texto do PDF:', error);
+      throw new Error('Falha ao editar texto do PDF');
+    }
   }
 
   /**
@@ -80,7 +135,7 @@ export class PDFService {
       const updatedPages = [...updatedDocument.pages];
       const page = { ...updatedPages[pageIndex] };
       
-      const annotation: TextAnnotation = {
+      const annotation = {
         id: `annotation-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
         content: text,
         x,
@@ -107,7 +162,7 @@ export class PDFService {
     document: PDFDocumentType,
     pageIndex: number,
     annotationId: string,
-    updates: Partial<TextAnnotation>
+    updates: any
   ): PDFDocumentType {
     const updatedDocument = { ...document };
     
@@ -254,24 +309,20 @@ export class PDFService {
       const pdfDoc = await PDFLibDocument.create();
       
       for (const document of documents) {
-        if (document.pdfDoc) {
-          const pageCount = document.pdfDoc.getPageCount();
+        const arrayBuffer = await document.file.arrayBuffer();
+        const sourcePdfDoc = await PDFLibDocument.load(arrayBuffer);
+        const pageCount = sourcePdfDoc.getPageCount();
+        
+        for (let i = 0; i < pageCount; i++) {
+          const [copiedPage] = await pdfDoc.copyPages(sourcePdfDoc, [i]);
+          pdfDoc.addPage(copiedPage);
           
-          for (let i = 0; i < pageCount; i++) {
-            const [copiedPage] = await pdfDoc.copyPages(document.pdfDoc, [i]);
-            pdfDoc.addPage(copiedPage);
-            
-            // Aplicar rotação se necessário
-            const page = document.pages[i];
-            if (page && page.rotation !== 0) {
-              const pdfPage = pdfDoc.getPage(pdfDoc.getPageCount() - 1);
-              // Usar a função degrees do pdf-lib para converter a rotação
-              pdfPage.setRotation(degrees(page.rotation));
-            }
-            
-            // Nota: As anotações de texto são mantidas apenas na interface
-            // Para incluir anotações no PDF final, seria necessário uma implementação mais complexa
-            // Por enquanto, o PDF gerado contém apenas as páginas originais com rotações aplicadas
+          // Aplicar rotação se necessário
+          const page = document.pages[i];
+          if (page && page.rotation !== 0) {
+            const pdfPage = pdfDoc.getPage(pdfDoc.getPageCount() - 1);
+            // Usar a função degrees do pdf-lib para converter a rotação
+            pdfPage.setRotation(degrees(page.rotation));
           }
         }
       }
@@ -322,224 +373,134 @@ export class PDFService {
   }
 
   /**
-   * Gerencia o cache de PDFs para evitar vazamentos de memória
+   * Obtém configurações de compressão baseadas no nível de qualidade
+   * @param quality - Nível de qualidade (0.1 a 1.0)
+   * @returns Configurações de compressão
    */
-  private static manageCache(documentId: string, pdfDoc: any): void {
-    // Limpar cache se exceder o tamanho máximo
-    if (PDFService.pdfCache.size >= PDFService.MAX_CACHE_SIZE) {
-      const firstKey = PDFService.pdfCache.keys().next().value;
-      if (firstKey) {
-        PDFService.pdfCache.delete(firstKey);
-      }
-    }
-    
-    // Adicionar ao cache
-    PDFService.pdfCache.set(documentId, pdfDoc);
-  }
-
-  /**
-   * Limpa uma instância específica do PDF da memória
-   */
-  static cleanupDocument(documentId: string): void {
-    PDFService.pdfCache.delete(documentId);
-  }
-
-  /**
-   * Limpa todo o cache de PDFs
-   */
-  static clearCache(): void {
-    PDFService.pdfCache.clear();
-  }
-
-  /**
-   * Obtém estatísticas do cache
-   */
-  static getCacheStats(): { size: number; maxSize: number } {
-    return {
-      size: PDFService.pdfCache.size,
-      maxSize: PDFService.MAX_CACHE_SIZE
-    };
-  }
-
-  /**
-   * Edita texto original do PDF usando pdf-lib
-   */
-  static async editPDFText(
-    document: PDFDocumentType, 
-    pageIndex: number, 
-    oldText: string, 
-    newText: string
-  ): Promise<PDFDocumentType> {
-    if (!document.pdfDoc) {
-      throw new Error('PDF não carregado corretamente');
-    }
-
-    try {
-      const pdfDoc = document.pdfDoc;
-      const page = pdfDoc.getPage(pageIndex);
-      
-      // Para editar texto em pdf-lib, precisamos adicionar um novo texto
-      // e remover o antigo (pdf-lib não permite edição direta de texto existente)
-      
-      // Obter dimensões da página
-      const { width, height } = page.getSize();
-      
-      // Adicionar o novo texto na mesma posição aproximada
-      // (Esta é uma implementação simplificada - em produção seria mais complexa)
-      page.drawText(newText, {
-        x: 50,
-        y: height - 100,
-        size: 12
-      });
-      
-      // Criar uma nova instância do documento com as modificações
-      const modifiedBytes = await pdfDoc.save();
-      const modifiedPdfDoc = await PDFLibDocument.load(modifiedBytes);
-      
-      // Criar novo documento com as modificações
-      const modifiedDocument: PDFDocumentType = {
-        ...document,
-        pdfDoc: modifiedPdfDoc,
-        pages: document.pages.map((page, index) => ({
-          ...page,
-          textAnnotations: index === pageIndex ? 
-            page.textAnnotations.map(annotation => 
-              annotation.content === oldText ? 
-                { ...annotation, content: newText } : annotation
-            ) : page.textAnnotations
-        }))
+  private static getCompressionConfig(quality: number) {
+    if (quality >= 0.8) {
+      // Baixa compressão - máxima qualidade
+      return {
+        useObjectStreams: true,
+        objectsPerTick: 100,
+        updateFieldAppearances: false,
+        removeDefaultPage: false
       };
-
-      return modifiedDocument;
-    } catch (error) {
-      console.error('Erro ao editar texto do PDF:', error);
-      throw new Error('Falha ao editar texto do PDF');
+    } else if (quality >= 0.6) {
+      // Compressão média - equilíbrio
+      return {
+        useObjectStreams: true,
+        objectsPerTick: 75,
+        updateFieldAppearances: false,
+        removeDefaultPage: true
+      };
+    } else if (quality >= 0.4) {
+      // Alta compressão - redução significativa
+      return {
+        useObjectStreams: true,
+        objectsPerTick: 50,
+        updateFieldAppearances: true,
+        removeDefaultPage: true
+      };
+    } else {
+      // Compressão máxima - máxima redução
+      return {
+        useObjectStreams: true,
+        objectsPerTick: 25,
+        updateFieldAppearances: true,
+        removeDefaultPage: true
+      };
     }
   }
 
   /**
-   * Obtém texto de uma região específica do PDF
-   * Nota: pdf-lib não tem getTextContent, então retornamos texto vazio
-   * O texto será obtido pelo react-pdf no componente
+   * Comprime um PDF com diferentes níveis de qualidade
+   * @param document - Documento PDF a ser comprimido
+   * @param quality - Nível de qualidade (0.1 a 1.0)
    */
-  static async getTextFromRegion(
-    document: PDFDocumentType, 
-    pageIndex: number, 
-    x: number, 
-    y: number, 
-    width: number, 
-    height: number
-  ): Promise<string> {
-    // pdf-lib não tem getTextContent, então retornamos texto vazio
-    // O texto será obtido pelo react-pdf no componente FileViewer
-    return '';
-  }
-
-  /**
-   * Edita texto do PDF usando coordenadas específicas
-   * Esta implementação usa overlay inteligente para "apagar" o texto original
-   */
-  static async editTextAtCoordinates(
-    document: PDFDocumentType,
-    pageIndex: number,
-    pdfX: number,
-    pdfY: number,
-    newText: string,
-    fontSize: number = 12,
-    textWidth: number = 100,
-    textHeight: number = 20
-  ): Promise<PDFDocumentType> {
-    if (!document.pdfDoc) {
-      throw new Error('PDF não carregado corretamente');
-    }
-
+  static async compressPDF(document: PDFDocumentType, quality: number = 0.7): Promise<PDFDocumentType> {
     try {
-      // Criar uma nova instância do PDF para não modificar o original
-      const originalBytes = await document.pdfDoc.save();
-      const pdfDoc = await PDFLibDocument.load(originalBytes);
-      const page = pdfDoc.getPage(pageIndex);
+      const arrayBuffer = await document.file.arrayBuffer();
+      const pdfDoc = await PDFLibDocument.load(arrayBuffer);
       
-      // Obter dimensões da página
-      const { width, height } = page.getSize();
+      // Determinar configurações baseadas na qualidade
+      const compressionConfig = this.getCompressionConfig(quality);
       
-      // Calcular área de cobertura baseada no tamanho do texto
-      const textLength = newText.length;
-      const estimatedWidth = Math.max(textWidth, textLength * fontSize * 0.6);
-      const estimatedHeight = Math.max(textHeight, fontSize * 1.2);
+      console.log(`Comprimindo PDF "${document.name}" com qualidade ${(quality * 100).toFixed(0)}%`);
       
-      // Desenhar múltiplas camadas de retângulos brancos para garantir cobertura completa
-      // Camada 1: Retângulo principal
-      page.drawRectangle({
-        x: pdfX - 2, // Margem extra
-        y: pdfY - estimatedHeight - 2,
-        width: estimatedWidth + 4,
-        height: estimatedHeight + 4,
-        color: rgb(1, 1, 1), // Branco
-        borderColor: rgb(1, 1, 1),
-        borderWidth: 0
+      // Salvar o PDF com configurações otimizadas baseadas na qualidade
+      const compressedBytes = await pdfDoc.save({
+        useObjectStreams: compressionConfig.useObjectStreams,
+        addDefaultPage: false,
+        objectsPerTick: compressionConfig.objectsPerTick,
+        updateFieldAppearances: compressionConfig.updateFieldAppearances,
+        removeDefaultPage: compressionConfig.removeDefaultPage
       });
       
-      // Camada 2: Retângulo adicional para garantir cobertura
-      page.drawRectangle({
-        x: pdfX - 1,
-        y: pdfY - estimatedHeight - 1,
-        width: estimatedWidth + 2,
-        height: estimatedHeight + 2,
-        color: rgb(1, 1, 1), // Branco
-        borderColor: rgb(1, 1, 1),
-        borderWidth: 0
-      });
+      // Criar um novo File com o PDF comprimido
+      const arrayBuffer2 = new ArrayBuffer(compressedBytes.length);
+      const uint8Array = new Uint8Array(arrayBuffer2);
+      uint8Array.set(compressedBytes);
       
-      // Camada 3: Retângulo final
-      page.drawRectangle({
-        x: pdfX,
-        y: pdfY - estimatedHeight,
-        width: estimatedWidth,
-        height: estimatedHeight,
-        color: rgb(1, 1, 1), // Branco
-        borderColor: rgb(1, 1, 1),
-        borderWidth: 0
-      });
-      
-      // Desenhar o novo texto
-      page.drawText(newText, {
-        x: pdfX,
-        y: pdfY,
-        size: fontSize,
-        color: rgb(0, 0, 0) // Preto
-      });
-      
-      // Criar uma nova instância do documento com as modificações
-      const modifiedBytes = await pdfDoc.save();
-      const modifiedPdfDoc = await PDFLibDocument.load(modifiedBytes);
-      
-      // Criar um novo File com o PDF modificado
-      const arrayBuffer = new ArrayBuffer(modifiedBytes.length);
-      const uint8Array = new Uint8Array(arrayBuffer);
-      uint8Array.set(modifiedBytes);
-      
-      const modifiedFile = new File([arrayBuffer], document.name, {
+      const compressedFile = new File([arrayBuffer2], document.name.replace('.pdf', '_comprimido.pdf'), {
         type: 'application/pdf',
         lastModified: Date.now()
       });
       
-      // Criar novo documento com as modificações
-      const modifiedDocument: PDFDocumentType = {
+      // Criar nova instância do PDF comprimido
+      const compressedPdfDoc = await PDFLibDocument.load(compressedBytes);
+      
+      // Criar novo documento com o arquivo comprimido
+      const compressedDocument: PDFDocumentType = {
         ...document,
-        file: modifiedFile, // Usar o novo arquivo modificado
-        pdfDoc: modifiedPdfDoc,
-        pages: document.pages.map((page, index) => ({
-          ...page,
-          // Atualizar dimensões se necessário
-          width: index === pageIndex ? width : page.width,
-          height: index === pageIndex ? height : page.height,
-        }))
+        file: compressedFile,
+        size: compressedFile.size,
+        name: compressedFile.name
       };
 
-      return modifiedDocument;
+      return compressedDocument;
     } catch (error) {
-      console.error('Erro ao editar texto do PDF:', error);
-      throw new Error('Falha ao editar texto do PDF');
+      console.error('Erro ao comprimir PDF:', error);
+      throw new Error('Falha ao comprimir PDF');
     }
+  }
+
+  /**
+   * Comprime múltiplos PDFs em lote
+   */
+  static async compressMultiplePDFs(documents: PDFDocumentType[], quality: number = 0.7): Promise<PDFDocumentType[]> {
+    const compressedDocuments: PDFDocumentType[] = [];
+    
+    for (const document of documents) {
+      try {
+        const compressed = await PDFService.compressPDF(document, quality);
+        compressedDocuments.push(compressed);
+      } catch (error) {
+        console.error(`Erro ao comprimir documento ${document.name}:`, error);
+        // Em caso de erro, manter o documento original
+        compressedDocuments.push(document);
+      }
+    }
+    
+    return compressedDocuments;
+  }
+
+  /**
+   * Calcula a taxa de compressão entre dois documentos
+   */
+  static calculateCompressionRatio(originalSize: number, compressedSize: number): {
+    ratio: number;
+    percentage: number;
+    savedBytes: number;
+  } {
+    const savedBytes = originalSize - compressedSize;
+    const ratio = originalSize / compressedSize;
+    const percentage = (savedBytes / originalSize) * 100;
+    
+    return {
+      ratio: Math.round(ratio * 100) / 100,
+      percentage: Math.round(percentage * 100) / 100,
+      savedBytes
+    };
   }
 }

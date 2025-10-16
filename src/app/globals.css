@@ -2,6 +2,28 @@
 @tailwind components;
 @tailwind utilities;
 
+/* PDF.js specific styles */
+.react-pdf__Page {
+  background-color: white !important;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.1) !important;
+  border-radius: 8px !important;
+  margin: 0 auto !important;
+}
+
+.react-pdf__Page__canvas {
+  background-color: white !important;
+  display: block !important;
+  margin: 0 auto !important;
+}
+
+.react-pdf__Page__textContent {
+  background-color: transparent !important;
+}
+
+.react-pdf__Document {
+  background-color: transparent !important;
+}
+
 :root {
   --foreground-rgb: 15, 23, 42;
   --background-rgb: 248, 250, 252;
@@ -355,5 +377,79 @@ body::before {
   
   .custom-scrollbar::-webkit-scrollbar-thumb:hover {
     background: #94a3b8;
+  }
+
+  /* Sidebar Styles */
+  .sidebar {
+    @apply bg-gradient-to-b from-slate-800 via-gray-900 to-slate-800 border-r border-gray-700 shadow-2xl;
+  }
+
+  .sidebar-item {
+    @apply flex items-center space-x-3 p-3 rounded-lg transition-all duration-200 text-gray-300 hover:bg-gray-700 hover:text-white;
+  }
+
+  .sidebar-item.active {
+    @apply bg-blue-600 text-white shadow-lg;
+  }
+
+  .sidebar-section {
+    @apply mb-6;
+  }
+
+  .sidebar-section-title {
+    @apply text-sm font-semibold text-gray-300 mb-3 uppercase tracking-wide;
+  }
+
+  /* Mobile Sidebar Overlay */
+  .sidebar-overlay {
+    @apply fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden;
+  }
+
+  /* Sidebar Animation */
+  .sidebar-transition {
+    @apply transform transition-transform duration-300 ease-in-out;
+  }
+
+  .sidebar-open {
+    @apply translate-x-0;
+  }
+
+  .sidebar-closed {
+    @apply -translate-x-full lg:translate-x-0;
+  }
+
+  /* Tool Status Indicators */
+  .tool-status {
+    @apply inline-flex items-center px-2 py-1 rounded-full text-xs font-medium;
+  }
+
+  .tool-status.active {
+    @apply bg-green-100 text-green-800;
+  }
+
+  .tool-status.inactive {
+    @apply bg-gray-100 text-gray-800;
+  }
+
+  /* Compression Progress */
+  .compression-progress {
+    @apply w-full bg-gray-200 rounded-full h-2;
+  }
+
+  .compression-progress-bar {
+    @apply bg-blue-600 h-2 rounded-full transition-all duration-300;
+  }
+
+  /* Document Stats */
+  .document-stats {
+    @apply bg-gray-800 rounded-lg p-3;
+  }
+
+  .stat-item {
+    @apply flex justify-between text-xs text-gray-400;
+  }
+
+  .stat-value {
+    @apply text-white font-medium;
   }
 }

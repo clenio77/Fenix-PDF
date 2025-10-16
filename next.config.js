@@ -23,7 +23,11 @@ const nextConfig = {
   experimental: {
     // Configurações experimentais removidas
   },
-  webpack: (config, { isServer }) => {
+  // Configurações para resolver problemas de chunk loading
+  generateBuildId: async () => {
+    return 'build-' + Date.now();
+  },
+  webpack: (config, { isServer, dev }) => {
     // Configuração mais segura para fallbacks
     if (!isServer) {
       config.resolve.fallback = {
@@ -43,6 +47,30 @@ const nextConfig = {
         canvas: false,
       };
     }
+
+    // Configurações para resolver problemas de chunk loading
+    if (dev) {
+      config.optimization = {
+        ...config.optimization,
+        splitChunks: {
+          chunks: 'all',
+          cacheGroups: {
+            default: {
+              minChunks: 1,
+              priority: -20,
+              reuseExistingChunk: true,
+            },
+            vendor: {
+              test: /[\\/]node_modules[\\/]/,
+              name: 'vendors',
+              priority: -10,
+              chunks: 'all',
+            },
+          },
+        },
+      };
+    }
+
     return config;
   },
 };

@@ -19,13 +19,19 @@ export interface TextAnnotation {
   color?: string;
 }
 
+/**
+ * --- CORREÇÃO DA TIPAGEM ---
+ * A propriedade `pdfDoc` foi removida. A instância de `pdf-lib` não deve ser
+ * mantida no estado da aplicação. Ela será carregada sob demanda pelas
+ * funções de manipulação no PDFService quando necessário.
+ * A fonte da verdade é o objeto `File`.
+ */
 export interface PDFDocument {
   id: string;
   name: string;
   size: number;
-  pages: PDFPage[];
+  pages: PDFPage[]; // Pode ser populado progressivamente
   file: File;
-  pdfDoc?: import('pdf-lib').PDFDocument; // Instância tipada do PDFLib para manipulações
 }
 
 export interface PDFEngineState {
