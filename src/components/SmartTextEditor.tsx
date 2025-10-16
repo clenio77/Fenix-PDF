@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import { PDFDocument as PDFLibDocument } from 'pdf-lib';
 import { PDFDocument as PDFDocumentType } from '../lib/types';
 import { EnhancedPDFService, EditTextOptions } from '../services/enhancedPDFService';
 import { PDFTextAnalyzer } from '../services/PDFTextAnalyzer';
@@ -83,8 +84,13 @@ export default function SmartTextEditor({
 
     try {
       setIsLoading(true);
+      
+      // Carregar o PDF dinamicamente usando pdf-lib
+      const arrayBuffer = await document.file.arrayBuffer();
+      const pdfDoc = await PDFLibDocument.load(arrayBuffer);
+      
       const result = await PDFTextAnalyzer.getTextBoundingBox(
-        document.pdfDoc!,
+        pdfDoc,
         pageIndex,
         searchText
       );

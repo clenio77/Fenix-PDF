@@ -35,7 +35,8 @@ export class PDFService {
       pdfDoc.addPage(); // Adiciona uma página em branco
 
       const pdfBytes = await pdfDoc.save();
-      return new File([pdfBytes], file.name, { type: 'application/pdf' });
+      const outputBuffer = pdfBytes.buffer.slice(0);
+      return new File([outputBuffer], file.name, { type: 'application/pdf' });
 
     } catch (error) {
       console.error("Erro ao adicionar página em branco:", error);
@@ -65,7 +66,8 @@ export class PDFService {
       pdfDoc.removePage(pageIndex); // Remove a página
 
       const pdfBytes = await pdfDoc.save();
-      return new File([pdfBytes], file.name, { type: 'application/pdf' });
+      const outputBuffer = pdfBytes.buffer.slice(0);
+      return new File([outputBuffer], file.name, { type: 'application/pdf' });
 
     } catch (error) {
       console.error("Erro ao deletar página:", error);
