@@ -426,6 +426,7 @@ export class PDFService {
       const compressionConfig = this.getCompressionConfig(quality);
       
       console.log(`Comprimindo PDF "${document.name}" com qualidade ${(quality * 100).toFixed(0)}%`);
+      console.log('Configuração de compressão:', compressionConfig);
       
       // Salvar o PDF com configurações otimizadas baseadas na qualidade
       const compressedBytes = await pdfDoc.save({
