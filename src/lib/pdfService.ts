@@ -599,4 +599,124 @@ export class PDFService {
       savedBytes
     };
   }
+
+  /**
+   * Une múltiplos PDFs em um único documento
+   * @param documents - Array de documentos PDF para unir
+   * @param mergedFileName - Nome do arquivo unificado (opcional)
+   * @returns Novo documento PDF unificado
+   */
+  static async mergePDFs(documents: PDFDocumentType[], mergedFileName?: string): Promise<PDFDocumentType> {
+    try {
+      if (documents.length === 0) {
+        throw new Error('Nenhum documento fornecido para unir');
+      }
+
+      if (documents.length === 1) {
+        // Se há apenas um documento, retorna uma cópia
+        return { ...documents[0] };
+      }
+
+      console.log(`Unindo ${documents.length} PDFs...`);
+      
+      // Criar um novo documento PDF
+      const mergedPdf = await PDFLibDocument.create();
+      
+      // Processar cada documento
+      for (let i = 0; i < documents.length; i++) {
+        const document = documents[i];
+        console.log(`Processando documento ${i + 1}/${documents.length}: ${document.name}`);
+        
+        try {
+          // Carregar o PDF atual
+          const arrayBuffer = await document.file.arrayBuffer();
+          const pdfDoc = await PDFLibDocument.load(arrayBuffer);
+          
+          // Copiar todas as páginas do documento atual
+          const pageIndices = Array.from({ length: pdfDoc.getPageCount() }, (_, index) => index);
+          const copiedPages = await mergedPdf.copyPages(pdfDoc, pageIndices);
+          
+          // Adicionar as páginas copiadas ao documento unificado
+          copiedPages.forEach(page => mergedPdf.addPage(page));
+          
+          console.log(`Adicionadas ${pageIndices.length} páginas do documento: ${document.name}`);
+        } catch (error) {
+          console.error(`Erro ao processar documento ${document.name}:`, error);
+          // Continuar com os outros documentos mesmo se um falhar
+        }
+      }
+
+      // Salvar o documento unificado
+      const mergedBytes = await mergedPdf.save({
+        useObjectStreams: true,
+        addDefaultPage: false,
+        objectsPerTick: 50
+      });
+
+      // Criar o arquivo unificado
+      const uint8Array = new Uint8Array(mergedBytes);
+      const fileName = mergedFileName || `documentos-unidos-${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.pdf`;
+      const mergedFile = new File([uint8Array], fileName, {
+        type: 'application/pdf',
+        lastModified: Date.now()
+      });
+
+      console.log(`PDF unificado criado: ${fileName}`);
+      console.log(`Tamanho final: ${(mergedFile.size / 1024 / 1024).toFixed(2)} MB`);
+
+      // Criar o documento unificado
+      const mergedDocument: PDFDocumentType = {
+        id: `merged-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        name: fileName,
+        size: mergedFile.size,
+        pages: [], // Será populado quando carregado pelo FileViewer
+        file: mergedFile
+      };
+
+      return mergedDocument;
+    } catch (error) {
+      console.error('Erro ao unir PDFs:', error);
+      throw new Error(`Falha ao unir PDFs: ${(error as Error).message}`);
+    }
+  }
+
+  /**
+   * Comprime e une múltiplos PDFs em um único documento otimizado
+   * @param documents - Array de documentos PDF para comprimir e unir
+   * @param quality - Nível de qualidade da compressão (0.1 a 1.0)
+   * @param mergedFileName - Nome do arquivo unificado (opcional)
+   * @returns Novo documento PDF comprimido e unificado
+   */
+  static async compressAndMergePDFs(
+    documents: PDFDocumentType[], 
+    quality: number = 0.7,
+    mergedFileName?: string
+  ): Promise<PDFDocumentType> {
+    try {
+      if (documents.length === 0) {
+        throw new Error('Nenhum documento fornecido para comprimir e unir');
+      }
+
+      console.log(`Comprimindo e unindo ${documents.length} PDFs com qualidade ${(quality * 100).toFixed(0)}%...`);
+      
+      // Primeiro, comprimir todos os documentos
+      const compressedDocuments: PDFDocumentType[] = [];
+      for (let i = 0; i < documents.length; i++) {
+        const document = documents[i];
+        console.log(`Comprimindo documento ${i + 1}/${documents.length}: ${document.name}`);
+        
+        const compressedDoc = await this.compressPDF(document, quality);
+        compressedDocuments.push(compressedDoc);
+      }
+
+      // Depois, unir os documentos comprimidos
+      const mergedDocument = await this.mergePDFs(compressedDocuments, mergedFileName);
+      
+      console.log('Compressão e união concluídas com sucesso!');
+      return mergedDocument;
+    } catch (error) {
+      console.error('Erro ao comprimir e unir PDFs:', error);
+      throw new Error(`Falha ao comprimir e unir PDFs: ${(error as Error).message}`);
+    }
+  }
 }

@@ -8,9 +8,10 @@ interface CompressionModalProps {
   onClose: () => void;
   onConfirm: (quality: number, compressionLevel: string) => void;
   documentCount: number;
+  mode?: 'compress' | 'compressAndMerge'; // Novo prop para o modo
 }
 
-export default function CompressionModal({ isOpen, onClose, onConfirm, documentCount }: CompressionModalProps) {
+export default function CompressionModal({ isOpen, onClose, onConfirm, documentCount, mode = 'compress' }: CompressionModalProps) {
   const [quality, setQuality] = useState(0.7);
   const [compressionLevel, setCompressionLevel] = useState('medium');
 
@@ -80,7 +81,7 @@ export default function CompressionModal({ isOpen, onClose, onConfirm, documentC
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-200">
           <h3 className="text-lg font-semibold text-gray-900">
-            Configurar Compressão de PDF
+            {mode === 'compressAndMerge' ? 'Comprimir e Unir PDFs' : 'Configurar Compressão de PDF'}
           </h3>
           <button
             onClick={onClose}
@@ -96,8 +97,10 @@ export default function CompressionModal({ isOpen, onClose, onConfirm, documentC
         <div className="p-6">
           <div className="mb-6">
             <p className="text-sm text-gray-600 mb-4">
-              Comprimindo <span className="font-semibold">{documentCount}</span> documento(s). 
-              Escolha o nível de compressão desejado:
+              {mode === 'compressAndMerge' 
+                ? `Comprimindo e unindo ${documentCount} documento(s) em um único PDF. Escolha o nível de compressão:`
+                : `Comprimindo ${documentCount} documento(s). Escolha o nível de compressão desejado:`
+              }
             </p>
           </div>
 
@@ -180,7 +183,7 @@ export default function CompressionModal({ isOpen, onClose, onConfirm, documentC
               onClick={handleConfirm}
               className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium"
             >
-              Comprimir PDFs
+              {mode === 'compressAndMerge' ? 'Comprimir e Unir PDFs' : 'Comprimir PDFs'}
             </button>
           </div>
         </div>

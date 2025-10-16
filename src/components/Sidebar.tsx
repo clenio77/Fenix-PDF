@@ -7,6 +7,7 @@ import { PDFService } from '../lib/pdfService';
 import CompressionStats from './CompressionStats';
 import FileUploadCompact from './FileUploadCompact';
 import CompressionModal from './CompressionModal';
+import MergeModal from './MergeModal';
 
 interface SidebarProps {
   documents: PDFDocument[];
@@ -34,6 +35,9 @@ export default function Sidebar({
   const [isCompressing, setIsCompressing] = useState(false);
   const [originalDocuments, setOriginalDocuments] = useState<PDFDocument[]>([]);
   const [showCompressionModal, setShowCompressionModal] = useState(false);
+  const [isMerging, setIsMerging] = useState(false);
+  const [showMergeModal, setShowMergeModal] = useState(false);
+  const [showCompressAndMergeModal, setShowCompressAndMergeModal] = useState(false);
 
   const tools = [
     { 
@@ -111,6 +115,82 @@ export default function Sidebar({
       NotificationService.updateError(loadingToastId, 'Erro ao comprimir PDFs. Tente novamente.');
     } finally {
       setIsCompressing(false);
+    }
+  };
+
+  const handleMergePDFs = () => {
+    if (documents.length === 0) {
+      NotificationService.warning('Nenhum documento carregado para unir.');
+      return;
+    }
+    if (documents.length === 1) {
+      NotificationService.warning('É necessário pelo menos 2 documentos para unir.');
+      return;
+    }
+    setShowMergeModal(true);
+  };
+
+  const handleMergeConfirm = async (mergedFileName?: string) => {
+    setIsMerging(true);
+    const loadingToastId = NotificationService.loading(`Unindo ${documents.length} PDFs...`);
+
+    try {
+      const mergedDocument = await PDFService.mergePDFs(documents, mergedFileName);
+      
+      // Substituir todos os documentos pelo documento unificado
+      onDocumentsUpdate([mergedDocument]);
+      
+      NotificationService.updateSuccess(
+        loadingToastId, 
+        `PDFs unidos com sucesso! Arquivo: ${mergedDocument.name} (${(mergedDocument.size / 1024 / 1024).toFixed(2)} MB)`
+      );
+    } catch (error) {
+      console.error('Erro ao unir PDFs:', error);
+      NotificationService.updateError(loadingToastId, 'Erro ao unir PDFs. Tente novamente.');
+    } finally {
+      setIsMerging(false);
+      setShowMergeModal(false);
+    }
+  };
+
+  const handleCompressAndMergePDFs = () => {
+    if (documents.length === 0) {
+      NotificationService.warning('Nenhum documento carregado para comprimir e unir.');
+      return;
+    }
+    if (documents.length === 1) {
+      NotificationService.warning('É necessário pelo menos 2 documentos para unir.');
+      return;
+    }
+    setShowCompressAndMergeModal(true);
+  };
+
+  const handleCompressAndMergeConfirm = async (quality: number, compressionLevel: string) => {
+    setIsCompressing(true);
+    setIsMerging(true);
+    const loadingToastId = NotificationService.loading(`Comprimindo e unindo ${documents.length} PDFs com ${compressionLevel} compressão...`);
+
+    try {
+      const mergedDocument = await PDFService.compressAndMergePDFs(documents, quality);
+      
+      // Substituir todos os documentos pelo documento comprimido e unificado
+      onDocumentsUpdate([mergedDocument]);
+      
+      // Calcular estatísticas de compressão
+      const originalSize = documents.reduce((sum, doc) => sum + doc.size, 0);
+      const compressionData = PDFService.calculateCompressionRatio(originalSize, mergedDocument.size);
+      
+      NotificationService.updateSuccess(
+        loadingToastId, 
+        `PDFs comprimidos e unidos com sucesso! ${compressionData.percentage.toFixed(1)}% de redução (${(compressionData.savedBytes / 1024 / 1024).toFixed(2)} MB economizados). Arquivo: ${mergedDocument.name}`
+      );
+    } catch (error) {
+      console.error('Erro ao comprimir e unir PDFs:', error);
+      NotificationService.updateError(loadingToastId, 'Erro ao comprimir e unir PDFs. Tente novamente.');
+    } finally {
+      setIsCompressing(false);
+      setIsMerging(false);
+      setShowCompressAndMergeModal(false);
     }
   };
 
@@ -300,6 +380,28 @@ export default function Sidebar({
                   </svg>
                   <span>Baixar PDF Comprimido</span>
                 </button>
+
+                <button
+                  onClick={handleMergePDFs}
+                  disabled={documents.length < 2 || isMerging}
+                  className="w-full flex items-center justify-center space-x-2 p-3 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded-lg transition-colors"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                  </svg>
+                  <span>{isMerging ? 'Unindo...' : 'Unir PDFs'}</span>
+                </button>
+
+                <button
+                  onClick={handleCompressAndMergePDFs}
+                  disabled={documents.length < 2 || isCompressing || isMerging}
+                  className="w-full flex items-center justify-center space-x-2 p-3 bg-orange-600 hover:bg-orange-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded-lg transition-colors"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4" />
+                  </svg>
+                  <span>{(isCompressing || isMerging) ? 'Processando...' : 'Comprimir e Unir'}</span>
+                </button>
               </div>
             </div>
 
@@ -332,6 +434,24 @@ export default function Sidebar({
         isOpen={showCompressionModal}
         onClose={() => setShowCompressionModal(false)}
         onConfirm={handleCompressionConfirm}
+        documentCount={documents.length}
+        mode="compress"
+      />
+
+      {/* Modal de Configuração de Compressão e União */}
+      <CompressionModal
+        isOpen={showCompressAndMergeModal}
+        onClose={() => setShowCompressAndMergeModal(false)}
+        onConfirm={handleCompressAndMergeConfirm}
+        documentCount={documents.length}
+        mode="compressAndMerge"
+      />
+
+      {/* Modal de União de PDFs */}
+      <MergeModal
+        isOpen={showMergeModal}
+        onClose={() => setShowMergeModal(false)}
+        onConfirm={handleMergeConfirm}
         documentCount={documents.length}
       />
     </>
