@@ -24,7 +24,8 @@ export default function TestCompressionDebug() {
       
       console.log('Salvando PDF...');
       const pdfBytes = await pdfDoc.save();
-      const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+      const uint8Array = new Uint8Array(pdfBytes);
+      const blob = new Blob([uint8Array], { type: 'application/pdf' });
       const file = new File([blob], 'teste.pdf', { type: 'application/pdf' });
       
       console.log('Criando documento...');
