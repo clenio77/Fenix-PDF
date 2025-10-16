@@ -65,9 +65,9 @@ export default function SmartTextEditor({
   const analyzeDocument = async () => {
     try {
       setIsLoading(true);
-      const result = await EnhancedPDFService.analyzeDocument(document);
+      const result = await EnhancedPDFService.analyzeDocumentStructure_DISABLED(document);
       setAnalysis(result);
-      setRecommendations(result.recommendations);
+      setRecommendations([]);
     } catch (error) {
       console.error('Erro ao analisar documento:', error);
       NotificationService.error('Erro ao analisar documento');
@@ -159,7 +159,7 @@ export default function SmartTextEditor({
       let result;
 
       if (mode === 'search') {
-        result = await EnhancedPDFService.editTextWithDetection(
+        result = await EnhancedPDFService.editText(
           document,
           pageIndex,
           searchText,
@@ -167,7 +167,7 @@ export default function SmartTextEditor({
           editOptions
         );
       } else {
-        result = await EnhancedPDFService.editTextAtCoordinatesWithAnalysis(
+        result = await EnhancedPDFService.addTextAtPosition(
           document,
           pageIndex,
           x,
