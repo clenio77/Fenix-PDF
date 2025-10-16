@@ -386,28 +386,32 @@ export class PDFService {
       return {
         useObjectStreams: true,
         objectsPerTick: 100,
-        updateFieldAppearances: false
+        updateFieldAppearances: false,
+        addDefaultPage: false
       };
     } else if (quality >= 0.6) {
       // Compressão média - equilíbrio
       return {
         useObjectStreams: true,
         objectsPerTick: 75,
-        updateFieldAppearances: false
+        updateFieldAppearances: false,
+        addDefaultPage: false
       };
     } else if (quality >= 0.4) {
       // Alta compressão - redução significativa
       return {
         useObjectStreams: true,
         objectsPerTick: 50,
-        updateFieldAppearances: true
+        updateFieldAppearances: true,
+        addDefaultPage: false
       };
     } else {
       // Compressão máxima - máxima redução
       return {
         useObjectStreams: true,
         objectsPerTick: 25,
-        updateFieldAppearances: true
+        updateFieldAppearances: true,
+        addDefaultPage: false
       };
     }
   }
@@ -422,33 +426,70 @@ export class PDFService {
       const arrayBuffer = await document.file.arrayBuffer();
       const pdfDoc = await PDFLibDocument.load(arrayBuffer);
       
-      // Determinar configurações baseadas na qualidade
-      const compressionConfig = this.getCompressionConfig(quality);
-      
       console.log(`Comprimindo PDF "${document.name}" com qualidade ${(quality * 100).toFixed(0)}%`);
-      console.log('Configuração de compressão:', compressionConfig);
+      console.log(`Tamanho original: ${(arrayBuffer.byteLength / 1024 / 1024).toFixed(2)} MB`);
       
-      // Salvar o PDF com configurações otimizadas baseadas na qualidade
-      const compressedBytes = await pdfDoc.save({
-        useObjectStreams: compressionConfig.useObjectStreams,
+      // Aplicar compressão baseada na qualidade
+      let saveOptions: any = {
+        useObjectStreams: true,
         addDefaultPage: false,
-        objectsPerTick: compressionConfig.objectsPerTick,
-        updateFieldAppearances: compressionConfig.updateFieldAppearances
-      });
+        updateFieldAppearances: false
+      };
+
+      // Configurar objetosPerTick baseado na qualidade para compressão mais efetiva
+      if (quality >= 0.8) {
+        // Baixa compressão - máxima qualidade
+        saveOptions.objectsPerTick = 100;
+      } else if (quality >= 0.6) {
+        // Compressão média
+        saveOptions.objectsPerTick = 50;
+      } else if (quality >= 0.4) {
+        // Alta compressão
+        saveOptions.objectsPerTick = 25;
+        saveOptions.updateFieldAppearances = true;
+      } else {
+        // Compressão máxima
+        saveOptions.objectsPerTick = 10;
+        saveOptions.updateFieldAppearances = true;
+      }
+
+      console.log('Opções de salvamento:', saveOptions);
+      
+      // Salvar o PDF com configurações otimizadas
+      const compressedBytes = await pdfDoc.save(saveOptions);
+      
+      console.log(`Tamanho comprimido: ${(compressedBytes.length / 1024 / 1024).toFixed(2)} MB`);
+      
+      // Se a compressão não foi efetiva, tentar uma abordagem mais agressiva
+      if (compressedBytes.length >= arrayBuffer.byteLength * 0.95) {
+        console.log('Compressão não foi efetiva, tentando abordagem mais agressiva...');
+        
+        // Tentar com configurações mais agressivas
+        const aggressiveOptions = {
+          useObjectStreams: true,
+          addDefaultPage: false,
+          objectsPerTick: Math.max(5, Math.floor(quality * 20)), // Muito mais agressivo
+          updateFieldAppearances: true
+        };
+        
+        console.log('Opções agressivas:', aggressiveOptions);
+        const aggressiveBytes = await pdfDoc.save(aggressiveOptions);
+        
+        if (aggressiveBytes.length < compressedBytes.length) {
+          console.log(`Compressão agressiva melhorou: ${(aggressiveBytes.length / 1024 / 1024).toFixed(2)} MB`);
+          compressedBytes.set(aggressiveBytes);
+        }
+      }
       
       // Criar um novo File com o PDF comprimido
-      const arrayBuffer2 = new ArrayBuffer(compressedBytes.length);
-      const uint8Array = new Uint8Array(arrayBuffer2);
-      uint8Array.set(compressedBytes);
-      
-      const compressedFile = new File([arrayBuffer2], document.name.replace('.pdf', '_comprimido.pdf'), {
+      const uint8Array = new Uint8Array(compressedBytes);
+      const compressedFile = new File([uint8Array], document.name.replace('.pdf', '_comprimido.pdf'), {
         type: 'application/pdf',
         lastModified: Date.now()
       });
-      
-      // Criar nova instância do PDF comprimido
-      const compressedPdfDoc = await PDFLibDocument.load(compressedBytes);
-      
+
+      console.log(`Arquivo comprimido criado: ${compressedFile.name}, tamanho final: ${(compressedFile.size / 1024 / 1024).toFixed(2)} MB`);
+
       // Criar novo documento com o arquivo comprimido
       const compressedDocument: PDFDocumentType = {
         ...document,
