@@ -117,8 +117,16 @@ export default function MarkdownEditor({ pdfFile, onClose }: MarkdownEditorProps
   };
 
   const renderPreview = () => {
+    const escapeHtml = (content: string) =>
+      content
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+
     // Conversão simples de Markdown para HTML
-    let html = markdownContent
+    let html = escapeHtml(markdownContent)
       .replace(/^# (.*$)/gim, '<h1>$1</h1>')
       .replace(/^## (.*$)/gim, '<h2>$1</h2>')
       .replace(/^### (.*$)/gim, '<h3>$1</h3>')
