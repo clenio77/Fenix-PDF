@@ -148,10 +148,12 @@ function mockFieldExtraction(text: string): ExtractedLawData {
 }
 
 export async function POST(request: NextRequest) {
+  let bodyText = '';
   try {
-    const { text } = await request.json();
+    const body = await request.json();
+    bodyText = body.text || '';
 
-    if (!text || text.trim() === '') {
+    if (!bodyText || bodyText.trim() === '') {
       return NextResponse.json({ error: 'Texto não fornecido para extração' }, { status: 400 });
     }
 
@@ -163,7 +165,7 @@ export async function POST(request: NextRequest) {
     if (!apiKey) {
       console.warn('GEMINI_API_KEY não configurada no arquivo de ambiente (.env). Retornando dados simulados.');
       // Executa o processamento via heurísticas como fallback inteligente
-      const mockData = mockFieldExtraction(text);
+      const mockData = mockFieldExtraction(bodyText);
       return NextResponse.json({
         data: mockData,
         isSimulated: true,
@@ -184,7 +186,7 @@ export async function POST(request: NextRequest) {
           {
             parts: [
               {
-                text: `${SYSTEM_PROMPT}\n\nTexto do Documento:\n"""\n${text}\n"""`
+                text: `${SYSTEM_PROMPT}\n\nTexto do Documento:\n"""\n${bodyText}\n"""`
               }
             ]
           }
@@ -226,9 +228,8 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Erro na extração de campos jurídicos:', error);
     
-    // Fallback em caso de erro na chamada do Gemini
-    const textFallback = await request.clone().json().then(j => j.text).catch(() => '');
-    const fallbackData = mockFieldExtraction(textFallback);
+    // Fallback seguro usando a variável local
+    const fallbackData = mockFieldExtraction(bodyText);
     
     return NextResponse.json({
       data: fallbackData,

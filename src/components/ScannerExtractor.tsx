@@ -42,7 +42,6 @@ export default function ScannerExtractor({
   const [activeTab, setActiveTab] = useState<'info' | 'resumo' | 'texto'>('info');
 
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const containerRef = useRef<HTMLDivElement | null>(null);
 
   // Encontrar o documento e página atuais com base na seleção global
   useEffect(() => {
@@ -71,28 +70,49 @@ export default function ScannerExtractor({
     }
   }, [documents, selectedPageIndex]);
 
-  // Aplicar filtros de imagem no canvas renderizado pelo react-pdf
-  const applyFilters = () => {
-    // Procuramos o canvas gerado pelo react-pdf dentro do container
-    const pdfCanvas = containerRef.current?.querySelector('canvas');
-    if (!pdfCanvas || !canvasRef.current) return;
+  // Renderizar a página do PDF diretamente no canvas usando pdfjs puro
+  const renderPDFPageToCanvas = async () => {
+    if (!currentDocument || !canvasRef.current) return;
 
-    const displayCanvas = canvasRef.current;
-    const ctx = displayCanvas.getContext('2d');
-    if (!ctx) return;
+    try {
+      const displayCanvas = canvasRef.current;
+      const ctx = displayCanvas.getContext('2d');
+      if (!ctx) return;
 
-    // Sincronizar tamanhos
-    displayCanvas.width = pdfCanvas.width;
-    displayCanvas.height = pdfCanvas.height;
+      const fileBuffer = await currentDocument.file.arrayBuffer();
+      // Configurar o worker localmente
+      pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js';
+      
+      const pdf = await pdfjs.getDocument({ data: fileBuffer }).promise;
+      const page = await pdf.getPage(currentPage);
 
-    // Desenhar a página original
-    ctx.drawImage(pdfCanvas, 0, 0);
+      // Renderizar com base no zoom
+      const viewport = page.getViewport({ scale: zoom * 1.5 });
+      
+      displayCanvas.width = viewport.width;
+      displayCanvas.height = viewport.height;
 
-    // Obter dados da imagem para manipular pixels
-    const imgData = ctx.getImageData(0, 0, displayCanvas.width, displayCanvas.height);
+      // Renderizar o PDF no canvas de forma síncrona/promissiva
+      await page.render({
+        canvasContext: ctx,
+        viewport: viewport
+      }).promise;
+
+      // Aplicar os filtros de imagem sobrepostos (brilho, contraste, binarização)
+      applyImageFilters(displayCanvas, ctx);
+
+    } catch (err) {
+      console.error('Erro ao renderizar página do PDF no canvas do Scanner:', err);
+    }
+  };
+
+  // Aplicar filtros de imagem no canvas renderizado
+  const applyImageFilters = (canvas: HTMLCanvasElement, ctx: CanvasRenderingContext2D) => {
+    const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
     const data = imgData.data;
+    let modified = false;
 
-    // Aplicar filtros
+    // Aplicar filtros de processamento de pixel a pixel
     for (let i = 0; i < data.length; i += 4) {
       let r = data[i];
       let g = data[i + 1];
@@ -104,6 +124,7 @@ export default function ScannerExtractor({
         r = factor * (r - 128) + 128;
         g = factor * (g - 128) + 128;
         b = factor * (b - 128) + 128;
+        modified = true;
       }
 
       // Ajuste de brilho
@@ -112,15 +133,15 @@ export default function ScannerExtractor({
         r = r * factor;
         g = g * factor;
         b = b * factor;
+        modified = true;
       }
 
-      // Tons de cinza
+      // Tons de cinza / Binarização
       if (grayscale || binarize) {
-        // Luminância clássica
         const gray = 0.299 * r + 0.587 * g + 0.114 * b;
         
         if (binarize) {
-          // Binarização Preto & Branco Puro
+          // Binarização em Preto & Branco
           const val = gray >= binarizeThreshold ? 255 : 0;
           r = val;
           g = val;
@@ -130,24 +151,24 @@ export default function ScannerExtractor({
           g = gray;
           b = gray;
         }
+        modified = true;
       }
 
-      // Garantir limites 0-255
-      data[i] = Math.max(0, Math.min(255, r));
-      data[i + 1] = Math.max(0, Math.min(255, g));
-      data[i + 2] = Math.max(0, Math.min(255, b));
+      if (modified) {
+        data[i] = Math.max(0, Math.min(255, r));
+        data[i + 1] = Math.max(0, Math.min(255, g));
+        data[i + 2] = Math.max(0, Math.min(255, b));
+      }
     }
 
-    ctx.putImageData(imgData, 0, 0);
+    if (modified) {
+      ctx.putImageData(imgData, 0, 0);
+    }
   };
 
-  // Re-aplicar filtros quando mudam
+  // Disparar renderização quando as variáveis de estado do documento ou filtros mudarem
   useEffect(() => {
-    // Pequeno timeout para dar tempo da página do react-pdf renderizar
-    const timer = setTimeout(() => {
-      applyFilters();
-    }, 300);
-    return () => clearTimeout(timer);
+    renderPDFPageToCanvas();
   }, [currentPage, grayscale, binarize, binarizeThreshold, contrast, brightness, zoom, currentDocument]);
 
   // Função para executar OCR ou Extração de Texto Nativo
@@ -165,6 +186,8 @@ export default function ScannerExtractor({
       setProcessStage('rendering');
       
       const fileBuffer = await currentDocument.file.arrayBuffer();
+      // Configurar o worker localmente
+      pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js';
       const pdf = await pdfjs.getDocument({ data: fileBuffer }).promise;
       
       // Iremos processar a página atual do visualizador
@@ -178,13 +201,13 @@ export default function ScannerExtractor({
         console.log('Utilizando texto nativo do PDF');
         docText = nativeText;
       } else {
-        // PDF digitalizado/escaneado - Executar OCR com Tesseract.js
+        // PDF digitalizado/escaneado - Executar OCR com Tesseract.js no canvas visível
         setProcessStage('ocr');
-        console.log('PDF sem texto nativo. Executando OCR com Tesseract.js...');
+        console.log('PDF sem texto nativo. Executando OCR local com Tesseract.js...');
         
-        const canvas = canvasRef.current || containerRef.current?.querySelector('canvas');
+        const canvas = canvasRef.current;
         if (!canvas) {
-          throw new Error('Elemento de visualização do documento não encontrado para digitalização.');
+          throw new Error('Canvas do scanner não carregou a página.');
         }
 
         const dataUrl = canvas.toDataURL('image/png');
@@ -517,20 +540,7 @@ ${metadata.dispositivo || 'Sem dispositivo disponível.'}
               <div className="absolute left-0 right-0 w-full h-1 bg-green-400 shadow-[0_0_15px_rgba(74,222,128,0.8)] z-20 animate-[scan_2s_ease-in-out_infinite]" />
             )}
 
-            {/* Elemento de renderização oculto do PDF original */}
-            <div ref={containerRef} className="hidden">
-              <Document
-                file={currentDocument.file}
-                loading={null}
-              >
-                <Page
-                  pageNumber={currentPage}
-                  scale={zoom * 1.5} // Renderizar em alta qualidade no canvas oculto
-                  renderTextLayer={false}
-                  renderAnnotationLayer={false}
-                />
-              </Document>
-            </div>
+
 
             {/* Canvas de Display Filtrado */}
             <canvas
