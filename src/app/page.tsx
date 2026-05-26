@@ -15,6 +15,7 @@ import { NotificationService } from '../lib/notifications';
 import { useHistory } from '../lib/useHistory';
 import { useFenixShortcuts } from '../lib/useKeyboardShortcuts';
 import Breadcrumb from '../components/Breadcrumb';
+import ScannerExtractor from '../components/ScannerExtractor';
 
 export default function Home() {
   const [documents, setDocuments] = useState<PDFDocument[]>([]);
@@ -118,38 +119,62 @@ export default function Home() {
             </div>
             
             <div className="space-y-6">
-              {/* Instruções Contextuais */}
-              <Instructions 
-                documentsCount={documents.length}
-                selectedPageIndex={selectedPageIndex}
-              />
-
-              {/* Editor de PDF com Markdown */}
-              <OCRTextEditor 
-                documents={documents}
-                selectedPageIndex={selectedPageIndex}
-              />
-
-              {/* Visualizador Principal */}
-              <div className="card fade-in-up">
-                <div className="card-header">
-                  <h3 className="text-base font-semibold text-white flex items-center">
-                    <svg className="w-4 h-4 mr-2 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                    </svg>
-                    Visualizador de PDF
-                  </h3>
+              {currentTool === 'scanner' ? (
+                <div className="card fade-in-up border-2 border-indigo-400 bg-indigo-50/5">
+                  <div className="card-header bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 border-b border-indigo-900/30">
+                    <h3 className="text-base font-bold text-white flex items-center">
+                      <span className="text-xl mr-2">⚡</span>
+                      Scanner e Extração de Metadados Jurídicos
+                      <span className="ml-2 px-2 py-1 bg-indigo-600 text-white text-xs rounded-full">IA</span>
+                    </h3>
+                    <p className="text-xs text-white/60 mt-1">
+                      Digitalize páginas do documento com filtros de imagem e extraia automaticamente campos jurídicos via Gemini
+                    </p>
+                  </div>
+                  <div className="card-body">
+                    <ScannerExtractor 
+                      documents={documents}
+                      selectedPageIndex={selectedPageIndex}
+                      onDocumentsUpdate={setDocuments}
+                    />
+                  </div>
                 </div>
-                <div className="card-body">
-                  <FileViewer 
-                    documents={documents} 
-                    currentTool={currentTool}
+              ) : (
+                <>
+                  {/* Instruções Contextuais */}
+                  <Instructions 
+                    documentsCount={documents.length}
                     selectedPageIndex={selectedPageIndex}
-                    onDocumentsUpdate={setDocuments}
                   />
-                </div>
-              </div>
+
+                  {/* Editor de PDF com Markdown */}
+                  <OCRTextEditor 
+                    documents={documents}
+                    selectedPageIndex={selectedPageIndex}
+                  />
+
+                  {/* Visualizador Principal */}
+                  <div className="card fade-in-up">
+                    <div className="card-header">
+                      <h3 className="text-base font-semibold text-white flex items-center">
+                        <svg className="w-4 h-4 mr-2 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                        </svg>
+                        Visualizador de PDF
+                      </h3>
+                    </div>
+                    <div className="card-body">
+                      <FileViewer 
+                        documents={documents} 
+                        currentTool={currentTool}
+                        selectedPageIndex={selectedPageIndex}
+                        onDocumentsUpdate={setDocuments}
+                      />
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </main>

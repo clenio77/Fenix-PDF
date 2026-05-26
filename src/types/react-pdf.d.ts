@@ -34,5 +34,7 @@ declare module 'react-pdf' {
     GlobalWorkerOptions: {
       workerSrc: string;
     };
+    getDocument: (src: any) => any;
+    [key: string]: any;
   };
 }
