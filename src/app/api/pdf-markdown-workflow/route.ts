@@ -215,9 +215,10 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     console.error('Erro no fluxo PDF-Markdown:', error);
-    return NextResponse.json({ 
-      error: 'Erro interno: ' + (error as Error).message 
-    }, { status: 500 });
+    return NextResponse.json(
+      { error: 'Erro interno ao processar o PDF-Markdown.' },
+      { status: 500 }
+    );
   }
 }
 
@@ -243,8 +244,9 @@ export async function GET(request: NextRequest) {
 
   } catch (error) {
     console.error('Erro ao converter PDF para Markdown:', error);
-    return NextResponse.json({ 
-      error: 'Erro interno: ' + (error as Error).message 
-    }, { status: 500 });
+    return NextResponse.json(
+      { error: 'Erro interno ao converter PDF para Markdown.' },
+      { status: 500 }
+    );
   }
 }
