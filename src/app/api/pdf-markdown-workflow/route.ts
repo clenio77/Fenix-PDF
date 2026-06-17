@@ -1,5 +1,46 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+const MAX_MARKDOWN_LENGTH = 200_000;
+const MAX_EDITS = 500;
+
+type WorkflowEdit = {
+  antigo?: string;
+  novo?: string;
+};
+
+function parseEdits(rawEdits: FormDataEntryValue | null): WorkflowEdit[] {
+  if (!rawEdits || typeof rawEdits !== 'string') {
+    return [];
+  }
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(rawEdits);
+  } catch {
+    throw new Error('Formato inválido para o campo "edits"');
+  }
+
+  if (!Array.isArray(parsed)) {
+    throw new Error('O campo "edits" deve ser um array');
+  }
+
+  if (parsed.length > MAX_EDITS) {
+    throw new Error(`Quantidade máxima de edições excedida (${MAX_EDITS})`);
+  }
+
+  return parsed;
+}
+
+function isLikelyPdfFile(file: File): boolean {
+  return file.name.toLowerCase().endsWith('.pdf');
+}
+
+function validateMarkdownSize(markdown: string): void {
+  if (markdown.length > MAX_MARKDOWN_LENGTH) {
+    throw new Error(`Conteúdo Markdown excede o limite de ${MAX_MARKDOWN_LENGTH} caracteres`);
+  }
+}
+
 // Simulação do MarkItDown para conversão PDF → Markdown
 // Em produção, isso seria uma chamada para um serviço Python com MarkItDown
 async function convertPDFToMarkdown(pdfFile: File): Promise<string> {
@@ -88,13 +129,13 @@ async function convertMarkdownToPDF(markdown: string): Promise<Buffer> {
   const { PDFDocument, rgb } = await import('pdf-lib');
   
   const pdfDoc = await PDFDocument.create();
-  const page = pdfDoc.addPage([595, 842]); // A4
+  const pageSize: [number, number] = [595, 842]; // A4
+  let currentPage = pdfDoc.addPage(pageSize);
   
   // Dividir markdown em linhas e processar
   const lines = markdown.split('\n');
   let y = 800;
   let fontSize = 12;
-  let isBold = false;
   
   for (const line of lines) {
     if (line.trim() === '') {
@@ -137,7 +178,7 @@ async function convertMarkdownToPDF(markdown: string): Promise<Buffer> {
     
     // Desenhar texto
     if (text.trim()) {
-      page.drawText(text, {
+      currentPage.drawText(text, {
         x: 50,
         y: y,
         size: currentFontSize,
@@ -149,7 +190,7 @@ async function convertMarkdownToPDF(markdown: string): Promise<Buffer> {
     
     // Nova página se necessário
     if (y < 50) {
-      const newPage = pdfDoc.addPage([595, 842]);
+      currentPage = pdfDoc.addPage(pageSize);
       y = 800;
     }
   }
@@ -161,12 +202,18 @@ async function convertMarkdownToPDF(markdown: string): Promise<Buffer> {
 export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData();
-    const pdfFile = formData.get('pdf') as File;
-    const edits = JSON.parse(formData.get('edits') as string || '[]');
-    const markdownContent = formData.get('markdownContent') as string;
+    const pdfEntry = formData.get('pdf');
+    const pdfFile = pdfEntry instanceof File ? pdfEntry : null;
+    const edits = parseEdits(formData.get('edits'));
+    const markdownEntry = formData.get('markdownContent');
+    const markdownContent = typeof markdownEntry === 'string' ? markdownEntry : '';
 
     if (!pdfFile && !markdownContent) {
       return NextResponse.json({ error: 'PDF ou conteúdo Markdown não fornecido' }, { status: 400 });
+    }
+
+    if (pdfFile && !isLikelyPdfFile(pdfFile)) {
+      return NextResponse.json({ error: 'Arquivo inválido. Envie um PDF válido.' }, { status: 400 });
     }
 
     let finalMarkdown: string;
@@ -180,8 +227,8 @@ export async function POST(request: NextRequest) {
       
       // Aplicar edições
       finalMarkdown = originalMarkdown;
-      edits.forEach((edit: { antigo: string; novo: string }) => {
-        if (edit.antigo && edit.novo) {
+      edits.forEach((edit) => {
+        if (typeof edit.antigo === 'string' && typeof edit.novo === 'string' && edit.antigo && edit.novo) {
           try {
             const textoEscapado = edit.antigo.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
             const regex = new RegExp(textoEscapado, 'gi');
@@ -198,6 +245,8 @@ export async function POST(request: NextRequest) {
     } else {
       return NextResponse.json({ error: 'Dados insuficientes' }, { status: 400 });
     }
+
+    validateMarkdownSize(finalMarkdown);
 
     // Converter Markdown para PDF
     const pdfBuffer = await convertMarkdownToPDF(finalMarkdown);
