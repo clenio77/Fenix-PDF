@@ -154,18 +154,28 @@ export default function CompressionModal({ isOpen, onClose, onConfirm, documentC
           </div>
 
           {/* Informações Adicionais */}
+          <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-4">
+            <div className="text-sm text-amber-900">
+              <p className="font-medium mb-1">Importante</p>
+              <p className="text-xs leading-relaxed">
+                A compressão reescreve o PDF com object streams (pdf-lib). A redução de tamanho
+                costuma ser <strong>modesta</strong>. Nenhuma página é removida — o conteúdo
+                completo é preservado.
+              </p>
+            </div>
+          </div>
+
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
             <div className="flex items-start">
-              <svg className="w-5 h-5 text-blue-600 mt-0.5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-5 h-5 text-blue-600 mt-0.5 mr-2 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
               <div className="text-sm text-blue-800">
-                <p className="font-medium mb-1">Dicas de Compressão:</p>
+                <p className="font-medium mb-1">Níveis:</p>
                 <ul className="space-y-1 text-xs">
-                  <li>• <strong>Baixa:</strong> Ideal para documentos importantes</li>
-                  <li>• <strong>Média:</strong> Recomendado para uso geral</li>
-                  <li>• <strong>Alta:</strong> Para economizar espaço</li>
-                  <li>• <strong>Máxima:</strong> Apenas para arquivamento</li>
+                  <li>• <strong>Baixa:</strong> máxima fidelidade estrutural</li>
+                  <li>• <strong>Média:</strong> equilíbrio (recomendado)</li>
+                  <li>• <strong>Alta / Máxima:</strong> mais agressivo na reescrita; ainda preserva todas as páginas</li>
                 </ul>
               </div>
             </div>

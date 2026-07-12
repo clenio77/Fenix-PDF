@@ -1,6 +1,9 @@
 export interface PDFPage {
   id: string;
+  /** Posição atual na lista (após reordenação). */
   index: number;
+  /** Índice da página no arquivo PDF original (File). */
+  sourceIndex: number;
   rotation: number;
   textAnnotations: TextAnnotation[];
   width: number;

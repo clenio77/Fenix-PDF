@@ -210,7 +210,34 @@ export class PDFService {
   }
 
   /**
-   * Rotaciona uma página do documento
+   * Converte cor hex (#RRGGBB) para rgb do pdf-lib.
+   */
+  private static hexToRgb(hex: string = '#000000') {
+    const cleaned = hex.replace('#', '').trim();
+    const full =
+      cleaned.length === 3
+        ? cleaned
+            .split('')
+            .map((c) => c + c)
+            .join('')
+        : cleaned.padStart(6, '0').slice(0, 6);
+    const n = parseInt(full, 16);
+    if (Number.isNaN(n)) return rgb(0, 0, 0);
+    return rgb(((n >> 16) & 255) / 255, ((n >> 8) & 255) / 255, (n & 255) / 255);
+  }
+
+  /**
+   * Índice da página no arquivo original (preserva sourceIndex após reordenação).
+   */
+  private static resolveSourceIndex(page: PDFPage, fallback: number): number {
+    if (typeof page.sourceIndex === 'number' && page.sourceIndex >= 0) {
+      return page.sourceIndex;
+    }
+    return fallback;
+  }
+
+  /**
+   * Rotaciona uma página do documento (metadados; aplicado no export).
    */
   static rotatePage(document: PDFDocumentType, pageIndex: number, rotation: number): PDFDocumentType {
     const updatedDocument = { ...document };
@@ -219,8 +246,7 @@ export class PDFService {
       const updatedPages = [...updatedDocument.pages];
       const page = { ...updatedPages[pageIndex] };
       
-      // Normaliza a rotação para estar entre 0 e 270 (em incrementos de 90)
-      page.rotation = ((page.rotation + rotation) % 360);
+      page.rotation = ((page.rotation + rotation) % 360 + 360) % 360;
       
       updatedPages[pageIndex] = page;
       updatedDocument.pages = updatedPages;
@@ -230,19 +256,22 @@ export class PDFService {
   }
 
   /**
-   * Remove uma página do documento
+   * Remove uma página da lista de exportação (preserva sourceIndex das demais).
    */
   static removePage(document: PDFDocumentType, pageIndex: number): PDFDocumentType {
     const updatedDocument = { ...document };
     
     if (pageIndex >= 0 && pageIndex < updatedDocument.pages.length) {
+      if (updatedDocument.pages.length <= 1) {
+        throw new Error('Não é possível remover a última página do documento');
+      }
       const updatedPages = [...updatedDocument.pages];
       updatedPages.splice(pageIndex, 1);
       
-      // Atualiza os índices das páginas restantes
       updatedDocument.pages = updatedPages.map((page, index) => ({
         ...page,
-        index
+        index,
+        sourceIndex: this.resolveSourceIndex(page, page.index),
       }));
     }
     
@@ -250,7 +279,7 @@ export class PDFService {
   }
 
   /**
-   * Reordena as páginas do documento
+   * Reordena as páginas do documento (preserva sourceIndex).
    */
   static reorderPages(document: PDFDocumentType, fromIndex: number, toIndex: number): PDFDocumentType {
     const updatedDocument = { ...document };
@@ -265,10 +294,10 @@ export class PDFService {
       const [movedPage] = updatedPages.splice(fromIndex, 1);
       updatedPages.splice(toIndex, 0, movedPage);
       
-      // Atualiza os índices das páginas
       updatedDocument.pages = updatedPages.map((page, index) => ({
         ...page,
-        index
+        index,
+        sourceIndex: this.resolveSourceIndex(page, page.index),
       }));
     }
     
@@ -276,7 +305,7 @@ export class PDFService {
   }
 
   /**
-   * Move uma página de um documento para outro
+   * Move uma página de um documento para outro (preserva sourceIndex / file de origem).
    */
   static movePageBetweenDocuments(
     sourceDocument: PDFDocumentType,
@@ -288,15 +317,33 @@ export class PDFService {
       return { sourceDocument, targetDocument };
     }
 
+    if (sourceDocument.pages.length <= 1) {
+      return { sourceDocument, targetDocument };
+    }
+
     const sourcePages = [...sourceDocument.pages];
     const targetPages = [...targetDocument.pages];
     
     const [movedPage] = sourcePages.splice(sourcePageIndex, 1);
-    targetPages.splice(targetPageIndex, 0, movedPage);
+    // Página movida ainda aponta para o File do documento de origem —
+    // cross-doc move só é seguro no export se ambos forem do mesmo file.
+    // Por simplicidade, mantemos a página no target com sourceIndex; o export
+    // de documentos separados usa o file de cada documento.
+    targetPages.splice(targetPageIndex, 0, {
+      ...movedPage,
+      sourceIndex: this.resolveSourceIndex(movedPage, movedPage.index),
+    });
     
-    // Atualiza os índices das páginas
-    const updatedSourcePages = sourcePages.map((page, index) => ({ ...page, index }));
-    const updatedTargetPages = targetPages.map((page, index) => ({ ...page, index }));
+    const updatedSourcePages = sourcePages.map((page, index) => ({
+      ...page,
+      index,
+      sourceIndex: this.resolveSourceIndex(page, page.index),
+    }));
+    const updatedTargetPages = targetPages.map((page, index) => ({
+      ...page,
+      index,
+      sourceIndex: this.resolveSourceIndex(page, page.index),
+    }));
     
     return {
       sourceDocument: { ...sourceDocument, pages: updatedSourcePages },
@@ -305,7 +352,42 @@ export class PDFService {
   }
 
   /**
-   * Gera um novo arquivo PDF com as modificações aplicadas
+   * Desenha anotações de texto numa página pdf-lib.
+   * Coordenadas das anotações são top-left (CSS/react-pdf) em escala 1.
+   */
+  private static drawAnnotationsOnPage(
+    pdfPage: ReturnType<PDFLibDocument['getPage']>,
+    pageMeta: PDFPage
+  ) {
+    const { width, height } = pdfPage.getSize();
+    const metaW = pageMeta.width || width;
+    const metaH = pageMeta.height || height;
+    const scaleX = width / metaW;
+    const scaleY = height / metaH;
+
+    for (const ann of pageMeta.textAnnotations || []) {
+      if (!ann.content?.trim()) continue;
+      const fontSize = ann.fontSize || 12;
+      const x = Math.max(0, ann.x * scaleX);
+      const y = Math.max(0, height - ann.y * scaleY - fontSize);
+
+      try {
+        pdfPage.drawText(ann.content, {
+          x,
+          y,
+          size: fontSize,
+          color: this.hexToRgb(ann.color),
+          maxWidth: (ann.width || 200) * scaleX,
+          lineHeight: fontSize * 1.2,
+        });
+      } catch (err) {
+        console.warn('Falha ao desenhar anotação no PDF:', err);
+      }
+    }
+  }
+
+  /**
+   * Gera um novo arquivo PDF honrando ordem, exclusões, rotação e anotações.
    */
   static async generatePDF(documents: PDFDocumentType[]): Promise<Blob> {
     try {
@@ -314,19 +396,35 @@ export class PDFService {
       for (const document of documents) {
         const arrayBuffer = await document.file.arrayBuffer();
         const sourcePdfDoc = await PDFLibDocument.load(arrayBuffer);
-        const pageCount = sourcePdfDoc.getPageCount();
-        
-        for (let i = 0; i < pageCount; i++) {
-          const [copiedPage] = await pdfDoc.copyPages(sourcePdfDoc, [i]);
+        const filePageCount = sourcePdfDoc.getPageCount();
+
+        const pagesToExport: PDFPage[] =
+          document.pages.length > 0
+            ? document.pages
+            : Array.from({ length: filePageCount }, (_, i) => ({
+                id: `page-${document.id}-${i}`,
+                index: i,
+                sourceIndex: i,
+                rotation: 0,
+                textAnnotations: [],
+                width: 0,
+                height: 0,
+              }));
+
+        for (const pageMeta of pagesToExport) {
+          const sourceIdx = this.resolveSourceIndex(pageMeta, pageMeta.index);
+          if (sourceIdx < 0 || sourceIdx >= filePageCount) continue;
+
+          const [copiedPage] = await pdfDoc.copyPages(sourcePdfDoc, [sourceIdx]);
           pdfDoc.addPage(copiedPage);
-          
-          // Aplicar rotação se necessário
-          const page = document.pages[i];
-          if (page && page.rotation !== 0) {
-            const pdfPage = pdfDoc.getPage(pdfDoc.getPageCount() - 1);
-            // Usar a função degrees do pdf-lib para converter a rotação
-            pdfPage.setRotation(degrees(page.rotation));
+
+          const pdfPage = pdfDoc.getPage(pdfDoc.getPageCount() - 1);
+
+          if (pageMeta.rotation && pageMeta.rotation % 360 !== 0) {
+            pdfPage.setRotation(degrees(pageMeta.rotation));
           }
+
+          this.drawAnnotationsOnPage(pdfPage, pageMeta);
         }
       }
       
@@ -382,7 +480,6 @@ export class PDFService {
    */
   private static getCompressionConfig(quality: number) {
     if (quality >= 0.8) {
-      // Baixa compressão - máxima qualidade
       return {
         useObjectStreams: true,
         objectsPerTick: 100,
@@ -390,26 +487,23 @@ export class PDFService {
         addDefaultPage: false
       };
     } else if (quality >= 0.6) {
-      // Compressão média - equilíbrio
       return {
         useObjectStreams: true,
-        objectsPerTick: 75,
+        objectsPerTick: 50,
         updateFieldAppearances: false,
         addDefaultPage: false
       };
     } else if (quality >= 0.4) {
-      // Alta compressão - redução significativa
       return {
         useObjectStreams: true,
-        objectsPerTick: 50,
+        objectsPerTick: 25,
         updateFieldAppearances: true,
         addDefaultPage: false
       };
     } else {
-      // Compressão máxima - máxima redução
       return {
         useObjectStreams: true,
-        objectsPerTick: 25,
+        objectsPerTick: 10,
         updateFieldAppearances: true,
         addDefaultPage: false
       };
@@ -417,144 +511,59 @@ export class PDFService {
   }
 
   /**
-   * Comprime um PDF com diferentes níveis de qualidade
-   * @param document - Documento PDF a ser comprimido
-   * @param quality - Nível de qualidade (0.1 a 1.0)
+   * Comprime um PDF preservando TODAS as páginas.
+   * Usa reescrita estrutural via pdf-lib (object streams). A redução costuma
+   * ser modesta; nunca remove páginas para atingir uma taxa artificial.
    */
   static async compressPDF(document: PDFDocumentType, quality: number = 0.7): Promise<PDFDocumentType> {
     try {
       const arrayBuffer = await document.file.arrayBuffer();
-      const pdfDoc = await PDFLibDocument.load(arrayBuffer);
-      
-      console.log(`Comprimindo PDF "${document.name}" com qualidade ${(quality * 100).toFixed(0)}%`);
-      console.log(`Tamanho original: ${(arrayBuffer.byteLength / 1024 / 1024).toFixed(2)} MB`);
-      
-      // Para compressão real, vamos usar uma abordagem diferente
-      // Simular compressão baseada na qualidade escolhida
-      let compressionRatio = 1.0;
-      
-      if (quality >= 0.8) {
-        compressionRatio = 0.95; // 5% de redução
-      } else if (quality >= 0.6) {
-        compressionRatio = 0.85; // 15% de redução
-      } else if (quality >= 0.4) {
-        compressionRatio = 0.70; // 30% de redução
-      } else {
-        compressionRatio = 0.50; // 50% de redução
-      }
+      const sourcePdf = await PDFLibDocument.load(arrayBuffer);
+      const pageCount = sourcePdf.getPageCount();
 
-      console.log(`Taxa de compressão desejada: ${((1 - compressionRatio) * 100).toFixed(0)}%`);
-      
-      // Configurações baseadas na qualidade
-      let saveOptions: any = {
-        useObjectStreams: true,
-        addDefaultPage: false,
-        updateFieldAppearances: false
-      };
+      const compressedPdf = await PDFLibDocument.create();
+      const pageIndices = Array.from({ length: pageCount }, (_, i) => i);
+      const copiedPages = await compressedPdf.copyPages(sourcePdf, pageIndices);
+      copiedPages.forEach((page) => compressedPdf.addPage(page));
 
-      // Configurar objetosPerTick baseado na qualidade
-      if (quality >= 0.8) {
-        saveOptions.objectsPerTick = 100;
-      } else if (quality >= 0.6) {
-        saveOptions.objectsPerTick = 50;
-      } else if (quality >= 0.4) {
-        saveOptions.objectsPerTick = 25;
-        saveOptions.updateFieldAppearances = true;
-      } else {
-        saveOptions.objectsPerTick = 10;
-        saveOptions.updateFieldAppearances = true;
-      }
+      const saveOptions = this.getCompressionConfig(quality);
+      const compressedBytes = await compressedPdf.save(saveOptions);
 
-      console.log('Opções de salvamento:', saveOptions);
-      
-      // Salvar o PDF com configurações otimizadas
-      const compressedBytes = await pdfDoc.save(saveOptions);
-      
-      console.log(`Tamanho após pdf-lib: ${(compressedBytes.length / 1024 / 1024).toFixed(2)} MB`);
-      
-      // Se a compressão do pdf-lib não foi suficiente, aplicar compressão adicional
-      let finalBytes = compressedBytes;
-      
-      if (compressedBytes.length > arrayBuffer.byteLength * compressionRatio) {
-        console.log('Aplicando compressão adicional para atingir a taxa desejada...');
-        
-        // Criar um novo PDF com menos objetos para simular compressão
-        const newPdfDoc = await PDFLibDocument.create();
-        
-        // Copiar páginas com configurações mais agressivas
-        const pageIndices = Array.from({ length: pdfDoc.getPageCount() }, (_, i) => i);
-        
-        for (const pageIndex of pageIndices) {
-          const [copiedPage] = await newPdfDoc.copyPages(pdfDoc, [pageIndex]);
-          newPdfDoc.addPage(copiedPage);
+      const uint8Array = new Uint8Array(compressedBytes);
+      const compressedFile = new File(
+        [uint8Array],
+        document.name.replace(/\.pdf$/i, '_comprimido.pdf'),
+        {
+          type: 'application/pdf',
+          lastModified: Date.now(),
         }
-        
-        // Salvar com configurações muito agressivas
-        const aggressiveOptions = {
-          useObjectStreams: true,
-          addDefaultPage: false,
-          objectsPerTick: Math.max(5, Math.floor(quality * 10)),
-          updateFieldAppearances: true
-        };
-        
-        console.log('Configurações agressivas:', aggressiveOptions);
-        finalBytes = await newPdfDoc.save(aggressiveOptions);
-        
-        console.log(`Tamanho após compressão agressiva: ${(finalBytes.length / 1024 / 1024).toFixed(2)} MB`);
-      }
-      
-      // Se ainda não atingiu a taxa desejada, aplicar redução artificial
-      if (finalBytes.length > arrayBuffer.byteLength * compressionRatio) {
-        console.log('Aplicando redução artificial para atingir a taxa desejada...');
-        
-        // Calcular o tamanho alvo
-        const targetSize = Math.floor(arrayBuffer.byteLength * compressionRatio);
-        
-        // Se o PDF é muito grande, podemos tentar remover algumas páginas ou aplicar outras técnicas
-        if (targetSize < finalBytes.length * 0.8) {
-          console.log('PDF muito grande, aplicando técnicas de redução extrema...');
-          
-          // Para PDFs muito grandes, criar uma versão simplificada
-          const simplifiedPdf = await PDFLibDocument.create();
-          const maxPages = Math.min(pdfDoc.getPageCount(), Math.floor(pdfDoc.getPageCount() * quality));
-          
-          for (let i = 0; i < maxPages; i++) {
-            const [copiedPage] = await simplifiedPdf.copyPages(pdfDoc, [i]);
-            simplifiedPdf.addPage(copiedPage);
-          }
-          
-          finalBytes = await simplifiedPdf.save({
-            useObjectStreams: true,
-            addDefaultPage: false,
-            objectsPerTick: 5,
-            updateFieldAppearances: true
-          });
-          
-          console.log(`Tamanho após simplificação: ${(finalBytes.length / 1024 / 1024).toFixed(2)} MB`);
-        }
-      }
-      
-      // Criar um novo File com o PDF comprimido
-      const uint8Array = new Uint8Array(finalBytes);
-      const compressedFile = new File([uint8Array], document.name.replace('.pdf', '_comprimido.pdf'), {
-        type: 'application/pdf',
-        lastModified: Date.now()
-      });
+      );
 
-      const actualCompression = ((arrayBuffer.byteLength - compressedFile.size) / arrayBuffer.byteLength) * 100;
-      console.log(`Arquivo comprimido criado: ${compressedFile.name}`);
-      console.log(`Tamanho final: ${(compressedFile.size / 1024 / 1024).toFixed(2)} MB`);
-      console.log(`Compressão real alcançada: ${actualCompression.toFixed(1)}%`);
+      // Preservar metadados de páginas (sourceIndex, rotação, anotações)
+      const preservedPages =
+        document.pages.length > 0
+          ? document.pages.map((page, index) => ({
+              ...page,
+              index,
+              sourceIndex: this.resolveSourceIndex(page, index),
+            }))
+          : Array.from({ length: pageCount }, (_, i) => ({
+              id: `page-${document.id}-${i}`,
+              index: i,
+              sourceIndex: i,
+              rotation: 0,
+              textAnnotations: [],
+              width: 0,
+              height: 0,
+            }));
 
-      // Criar novo documento com o arquivo comprimido
-      const compressedDocument: PDFDocumentType = {
+      return {
         ...document,
         file: compressedFile,
         size: compressedFile.size,
-        name: compressedFile.name
+        name: compressedFile.name,
+        pages: preservedPages,
       };
-
-      return compressedDocument;
     } catch (error) {
       console.error('Erro ao comprimir PDF:', error);
       throw new Error('Falha ao comprimir PDF');
@@ -601,10 +610,7 @@ export class PDFService {
   }
 
   /**
-   * Une múltiplos PDFs em um único documento
-   * @param documents - Array de documentos PDF para unir
-   * @param mergedFileName - Nome do arquivo unificado (opcional)
-   * @returns Novo documento PDF unificado
+   * Une múltiplos PDFs em um único documento (honra ordem/rotação/anotações).
    */
   static async mergePDFs(documents: PDFDocumentType[], mergedFileName?: string): Promise<PDFDocumentType> {
     try {
@@ -613,67 +619,25 @@ export class PDFService {
       }
 
       if (documents.length === 1) {
-        // Se há apenas um documento, retorna uma cópia
         return { ...documents[0] };
       }
 
-      console.log(`Unindo ${documents.length} PDFs...`);
-      
-      // Criar um novo documento PDF
-      const mergedPdf = await PDFLibDocument.create();
-      
-      // Processar cada documento
-      for (let i = 0; i < documents.length; i++) {
-        const document = documents[i];
-        console.log(`Processando documento ${i + 1}/${documents.length}: ${document.name}`);
-        
-        try {
-          // Carregar o PDF atual
-          const arrayBuffer = await document.file.arrayBuffer();
-          const pdfDoc = await PDFLibDocument.load(arrayBuffer);
-          
-          // Copiar todas as páginas do documento atual
-          const pageIndices = Array.from({ length: pdfDoc.getPageCount() }, (_, index) => index);
-          const copiedPages = await mergedPdf.copyPages(pdfDoc, pageIndices);
-          
-          // Adicionar as páginas copiadas ao documento unificado
-          copiedPages.forEach(page => mergedPdf.addPage(page));
-          
-          console.log(`Adicionadas ${pageIndices.length} páginas do documento: ${document.name}`);
-        } catch (error) {
-          console.error(`Erro ao processar documento ${document.name}:`, error);
-          // Continuar com os outros documentos mesmo se um falhar
-        }
-      }
-
-      // Salvar o documento unificado
-      const mergedBytes = await mergedPdf.save({
-        useObjectStreams: true,
-        addDefaultPage: false,
-        objectsPerTick: 50
-      });
-
-      // Criar o arquivo unificado
-      const uint8Array = new Uint8Array(mergedBytes);
-      const fileName = mergedFileName || `documentos-unidos-${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.pdf`;
-      const mergedFile = new File([uint8Array], fileName, {
+      const blob = await this.generatePDF(documents);
+      const fileName =
+        mergedFileName ||
+        `documentos-unidos-${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.pdf`;
+      const mergedFile = new File([blob], fileName, {
         type: 'application/pdf',
-        lastModified: Date.now()
+        lastModified: Date.now(),
       });
 
-      console.log(`PDF unificado criado: ${fileName}`);
-      console.log(`Tamanho final: ${(mergedFile.size / 1024 / 1024).toFixed(2)} MB`);
-
-      // Criar o documento unificado
-      const mergedDocument: PDFDocumentType = {
+      return {
         id: `merged-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
         name: fileName,
         size: mergedFile.size,
-        pages: [], // Será populado quando carregado pelo FileViewer
-        file: mergedFile
+        pages: [],
+        file: mergedFile,
       };
-
-      return mergedDocument;
     } catch (error) {
       console.error('Erro ao unir PDFs:', error);
       throw new Error(`Falha ao unir PDFs: ${(error as Error).message}`);

@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
-import FileUpload from '../components/FileUpload';
 import FileViewer from '../components/FileViewer';
 import FileList from '../components/FileList';
 import OCRTextEditor from '../components/OCRTextEditor';
@@ -22,51 +21,60 @@ export default function Home() {
   const [selectedPageIndex, setSelectedPageIndex] = useState<number | null>(null);
   const [currentTool, setCurrentTool] = useState<string>('select');
   const [sidebarOpen, setSidebarOpen] = useState<boolean>(false);
-  
-  // Hook de histórico para undo/redo
-  const { addAction, undo, redo, canUndo, canRedo } = useHistory();
-  
-  // Calcular total de páginas
+  const [isDownloading, setIsDownloading] = useState(false);
+
+  const { undo, redo, canUndo, canRedo } = useHistory();
+
   const totalPages = documents.reduce((sum, doc) => sum + doc.pages.length, 0);
-  
+
   const handleSaveAndDownload = async () => {
     if (documents.length === 0) {
-      NotificationService.warning('Nenhum documento carregado para unir.');
+      NotificationService.warning('Nenhum documento carregado para baixar.');
       return;
     }
-    
+
     let loadingToastId: string | undefined;
-    
+
     try {
-      // Mostrar loading com notificação
-      loadingToastId = NotificationService.loading('Unindo PDFs...');
-      
+      setIsDownloading(true);
+      loadingToastId = NotificationService.loading('Gerando PDF...');
+
       const blob = await PDFService.generatePDF(documents);
-      
-      // Gerar nome do arquivo baseado na data
+
       const now = new Date();
       const timestamp = now.toISOString().slice(0, 19).replace(/:/g, '-');
-      const filename = `documentos-unidos-${timestamp}.pdf`;
-      
+      const filename =
+        documents.length === 1
+          ? documents[0].name.replace(/\.pdf$/i, '') + `-editado-${timestamp}.pdf`
+          : `documentos-unidos-${timestamp}.pdf`;
+
       PDFService.downloadPDF(blob, filename);
-      
-      // Mostrar sucesso
-      NotificationService.updateSuccess(loadingToastId, `PDF gerado com sucesso! ${documents.length} documento(s) unido(s) em "${filename}"`);
+
+      NotificationService.updateSuccess(
+        loadingToastId,
+        `PDF baixado: "${filename}" (${documents.length} documento(s), ordem/rotação/anotações aplicadas).`
+      );
     } catch (error) {
       console.error('Erro ao gerar PDF:', error);
       if (loadingToastId) {
-        NotificationService.updateError(loadingToastId, 'Erro ao gerar PDF. Verifique se os arquivos estão válidos e tente novamente.');
+        NotificationService.updateError(
+          loadingToastId,
+          'Erro ao gerar PDF. Verifique se os arquivos estão válidos e tente novamente.'
+        );
       } else {
-        NotificationService.error('Erro ao gerar PDF. Verifique se os arquivos estão válidos e tente novamente.');
+        NotificationService.error(
+          'Erro ao gerar PDF. Verifique se os arquivos estão válidos e tente novamente.'
+        );
       }
+    } finally {
+      setIsDownloading(false);
     }
   };
 
   const handleFilesUploaded = (newDocs: PDFDocument[]) => {
-    setDocuments(prev => [...prev, ...newDocs]);
+    setDocuments((prev) => [...prev, ...newDocs]);
   };
 
-  // Keyboard shortcuts
   useFenixShortcuts({
     onUndo: canUndo ? undo : undefined,
     onRedo: canRedo ? redo : undefined,
@@ -75,12 +83,14 @@ export default function Home() {
 
   return (
     <div className="min-h-screen flex flex-col relative">
-      {/* Header Profissional */}
-      <Header documentsCount={documents.length} />
+      <Header
+        documentsCount={documents.length}
+        onDownload={handleSaveAndDownload}
+        canDownload={documents.length > 0 && !isDownloading}
+        isDownloading={isDownloading}
+      />
 
-      {/* Layout Principal com Sidebar */}
       <div className="flex flex-1">
-        {/* Sidebar */}
         <Sidebar
           documents={documents}
           currentTool={currentTool}
@@ -93,46 +103,70 @@ export default function Home() {
           onToggle={() => setSidebarOpen(!sidebarOpen)}
         />
 
-        {/* Conteúdo Principal */}
         <main className="flex-1 lg:ml-80">
           <div className="container-responsive py-8">
-            {/* Breadcrumb Navigation */}
-            <div className="mb-6">
-              <Breadcrumb 
-                documents={documents} 
-                currentPageIndex={selectedPageIndex} 
-                totalPages={totalPages} 
+            <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+              <Breadcrumb
+                documents={documents}
+                currentPageIndex={selectedPageIndex}
+                totalPages={totalPages}
               />
+              {documents.length > 0 && (
+                <button
+                  type="button"
+                  onClick={handleSaveAndDownload}
+                  disabled={isDownloading}
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-500 text-white text-sm font-medium rounded-lg transition-colors"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                    />
+                  </svg>
+                  {isDownloading ? 'Gerando…' : 'Baixar PDF'}
+                  <span className="hidden sm:inline text-xs opacity-80">(Ctrl+S)</span>
+                </button>
+              )}
             </div>
 
-            {/* Botão para abrir sidebar em mobile */}
             <div className="lg:hidden mb-4">
               <button
+                type="button"
                 onClick={() => setSidebarOpen(true)}
                 className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M4 6h16M4 12h16M4 18h16"
+                  />
                 </svg>
                 <span>Abrir Ferramentas</span>
               </button>
             </div>
-            
+
             <div className="space-y-6">
               {currentTool === 'scanner' ? (
                 <div className="card fade-in-up border-2 border-indigo-400 bg-indigo-50/5">
                   <div className="card-header bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 border-b border-indigo-900/30">
                     <h3 className="text-base font-bold text-white flex items-center">
-                      <span className="text-xl mr-2">⚡</span>
                       Scanner e Extração de Metadados Jurídicos
-                      <span className="ml-2 px-2 py-1 bg-indigo-600 text-white text-xs rounded-full">IA</span>
+                      <span className="ml-2 px-2 py-1 bg-indigo-600 text-white text-xs rounded-full">
+                        IA
+                      </span>
                     </h3>
                     <p className="text-xs text-white/60 mt-1">
-                      Digitalize páginas do documento com filtros de imagem e extraia automaticamente campos jurídicos via Gemini
+                      OCR no navegador; a extração jurídica envia texto à API Gemini quando
+                      configurada.
                     </p>
                   </div>
                   <div className="card-body">
-                    <ScannerExtractor 
+                    <ScannerExtractor
                       documents={documents}
                       selectedPageIndex={selectedPageIndex}
                       onDocumentsUpdate={setDocuments}
@@ -141,32 +175,46 @@ export default function Home() {
                 </div>
               ) : (
                 <>
-                  {/* Instruções Contextuais */}
-                  <Instructions 
+                  <Instructions
                     documentsCount={documents.length}
                     selectedPageIndex={selectedPageIndex}
                   />
 
-                  {/* Editor de PDF com Markdown */}
-                  <OCRTextEditor 
+                  {documents.some((d) => d.pages.length > 0) && (
+                    <div className="card fade-in-up">
+                      <div className="card-header">
+                        <h3 className="text-base font-semibold text-white">
+                          Páginas — reordenar, rotacionar e excluir
+                        </h3>
+                        <p className="text-xs text-white/60 mt-1">
+                          Arraste para reordenar (dentro do mesmo PDF). Alterações entram no download.
+                        </p>
+                      </div>
+                      <div className="card-body">
+                        <FileList
+                          documents={documents}
+                          selectedPageIndex={selectedPageIndex}
+                          onSelectPage={setSelectedPageIndex}
+                          onDocumentsUpdate={setDocuments}
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  <OCRTextEditor
                     documents={documents}
                     selectedPageIndex={selectedPageIndex}
                   />
 
-                  {/* Visualizador Principal */}
                   <div className="card fade-in-up">
                     <div className="card-header">
                       <h3 className="text-base font-semibold text-white flex items-center">
-                        <svg className="w-4 h-4 mr-2 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                        </svg>
                         Visualizador de PDF
                       </h3>
                     </div>
                     <div className="card-body">
-                      <FileViewer 
-                        documents={documents} 
+                      <FileViewer
+                        documents={documents}
                         currentTool={currentTool}
                         selectedPageIndex={selectedPageIndex}
                         onDocumentsUpdate={setDocuments}
@@ -180,7 +228,6 @@ export default function Home() {
         </main>
       </div>
 
-      {/* Footer Profissional */}
       <Footer />
     </div>
   );

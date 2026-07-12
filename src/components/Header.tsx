@@ -5,47 +5,68 @@ import ThemeToggle from './ThemeToggle';
 
 interface HeaderProps {
   documentsCount: number;
+  onDownload?: () => void;
+  canDownload?: boolean;
+  isDownloading?: boolean;
 }
 
-export default function Header({ documentsCount }: HeaderProps) {
+export default function Header({
+  documentsCount,
+  onDownload,
+  canDownload = false,
+  isDownloading = false,
+}: HeaderProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   return (
-    <header 
+    <header
       className="bg-gradient-to-r from-slate-800 via-gray-900 to-slate-800 backdrop-blur-xl border-b border-gray-700 sticky top-0 z-50 shadow-2xl relative overflow-hidden"
       role="banner"
       aria-label="Cabeçalho principal do Fênix PDF"
     >
       <div className="container-responsive relative z-10">
         <div className="flex items-center justify-between py-3">
-          {/* Título */}
           <div className="flex items-center space-x-2 sm:space-x-3">
             <div>
-              <h1 className="text-lg sm:text-xl font-bold text-white">
-                Fênix PDF
-              </h1>
-              <p className="text-xs text-gray-300 font-medium hidden sm:block">Editor de PDF Profissional</p>
+              <h1 className="text-lg sm:text-xl font-bold text-white">Fênix PDF</h1>
+              <p className="text-xs text-gray-300 font-medium hidden sm:block">
+                Ferramenta interna Correios
+              </p>
             </div>
           </div>
 
-          {/* Status e Informações */}
-          <div className="hidden md:flex items-center space-x-6">
-            <div className="flex items-center space-x-2 text-sm text-gray-300">
-              <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-              <span>Sistema Online</span>
-            </div>
+          <div className="hidden md:flex items-center space-x-4">
             <div className="text-sm text-gray-400">
-              {documentsCount} documento{documentsCount !== 1 ? 's' : ''} carregado{documentsCount !== 1 ? 's' : ''}
+              {documentsCount} documento{documentsCount !== 1 ? 's' : ''}
             </div>
+            {onDownload && (
+              <button
+                type="button"
+                onClick={onDownload}
+                disabled={!canDownload}
+                className="inline-flex items-center gap-2 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white text-sm font-medium rounded-lg transition-colors"
+              >
+                {isDownloading ? 'Gerando…' : 'Baixar PDF'}
+              </button>
+            )}
             <ThemeToggle />
           </div>
 
-          {/* Menu Mobile */}
-          <div className="md:hidden">
+          <div className="md:hidden flex items-center gap-2">
+            {onDownload && (
+              <button
+                type="button"
+                onClick={onDownload}
+                disabled={!canDownload}
+                className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 text-white text-sm rounded-lg"
+              >
+                {isDownloading ? '…' : 'Baixar'}
+              </button>
+            )}
             <button
               onClick={() => setIsMenuOpen(!isMenuOpen)}
               className="p-2 rounded-lg hover:bg-blue-500 transition-colors"
-              aria-label={isMenuOpen ? "Fechar menu" : "Abrir menu"}
+              aria-label={isMenuOpen ? 'Fechar menu' : 'Abrir menu'}
               aria-expanded={isMenuOpen}
               aria-controls="mobile-menu"
             >
@@ -56,22 +77,19 @@ export default function Header({ documentsCount }: HeaderProps) {
           </div>
         </div>
 
-        {/* Menu Mobile Expandido */}
         {isMenuOpen && (
-          <div 
+          <div
             id="mobile-menu"
             className="md:hidden border-t border-gray-600 py-4"
             role="navigation"
             aria-label="Menu de navegação mobile"
           >
             <div className="space-y-3">
-              <div className="flex items-center space-x-2 text-sm text-gray-300">
-                <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-                <span>Sistema Online</span>
-              </div>
               <div className="text-sm text-gray-400">
-                {documentsCount} documento{documentsCount !== 1 ? 's' : ''} carregado{documentsCount !== 1 ? 's' : ''}
+                {documentsCount} documento{documentsCount !== 1 ? 's' : ''} carregado
+                {documentsCount !== 1 ? 's' : ''}
               </div>
+              <ThemeToggle />
             </div>
           </div>
         )}

@@ -1,137 +1,93 @@
-# Fênix PDF - Ferramenta Interna de Edição
+# Fênix PDF
 
-Uma aplicação web moderna para manipulação e edição de arquivos PDF, desenvolvida especificamente para os Correios.
+Ferramenta web interna dos Correios para visualizar, organizar e exportar PDFs no navegador.
 
-## 🚀 Funcionalidades
+**Versão:** 0.2.0  
+**Status:** MVP utilizável — núcleo de visualização/export consolidado; algumas ferramentas avançadas ainda marcadas como “Em breve”.
 
-### ✅ Implementadas
+## O que funciona hoje
 
-- **Upload de PDFs**: Suporte a múltiplos arquivos com drag-and-drop
-- **Visualização**: Renderização de PDFs usando react-pdf
-- **Edição de Texto**: Adicionar, editar e excluir anotações de texto
-- **Manipulação de Páginas**: 
-  - Reorganizar páginas via drag-and-drop
-  - Rotacionar páginas (90°)
-  - Excluir páginas
-- **Geração de PDF**: Unir páginas e baixar PDF final
-- **Interface Responsiva**: Design moderno e intuitivo
+| Capacidade | Situação |
+|---|---|
+| Upload múltiplo (drag-and-drop) | Sim |
+| Visualização (zoom, navegação) | Sim (`react-pdf`) |
+| Anotações de texto (adicionar / editar / excluir) | Sim — overlays; entram no PDF ao baixar |
+| Reordenar páginas (drag-and-drop) | Sim |
+| Rotacionar páginas (90°) | Sim — aplicado no export |
+| Excluir páginas | Sim — da lista de exportação |
+| Unir PDFs | Sim |
+| Comprimir PDFs | Sim — reescrita estrutural (pdf-lib); redução costuma ser modesta; **nunca remove páginas** |
+| Baixar PDF (botão + Ctrl+S) | Sim — honra ordem, rotação, exclusões e anotações |
+| Scanner + OCR (Tesseract, pt) | Sim — no navegador |
+| Extração jurídica (Gemini) | Opcional — requer `GEMINI_API_KEY`; envia texto à API |
+| Editar texto nativo do PDF | Em breve (desabilitado na UI) |
+| Buscar e substituir / analisar estrutura | Em breve (desabilitado na UI) |
+| Workflow Markdown real (MarkItDown/Pandoc) | Parcial / simulado — não tratar como produção |
+| Autenticação corporativa | Não implementada |
+| Testes automatizados / CI | Não |
 
-### 🛠️ Tecnologias Utilizadas
+## Stack
 
-- **Next.js 14** - Framework React
-- **TypeScript** - Tipagem estática
-- **Tailwind CSS** - Estilização
-- **react-pdf** - Renderização de PDFs
-- **pdf-lib** - Manipulação de PDFs
-- **Canvas** - Suporte para renderização no servidor
+- Next.js 14 (App Router) + TypeScript + Tailwind CSS
+- `react-pdf` + `pdf-lib` + `tesseract.js`
+- PWA (`next-pwa`)
+- API opcional: Google Gemini (`/api/extract-fields`)
 
-## 📋 Requisitos Funcionais Atendidos
+## Como executar
 
-### Épico 1: Fundação e Visualização de PDF
-- ✅ **FR1**: Upload de múltiplos arquivos PDF simultaneamente
-- ✅ **FR2**: Visualização das páginas do PDF em interface de edição
-- ✅ **FR3**: Adicionar novas caixas de texto em qualquer lugar da página
+```bash
+npm install
+cp .env.example .env   # opcional: GEMINI_API_KEY=
+npm run dev
+```
 
-### Épico 2: Edição de Conteúdo
-- ✅ **FR7**: Selecionar e editar texto existente (anotações adicionadas pela ferramenta)
+Build:
 
-### Épico 3: Estrutura e Organização de Páginas
-- ✅ **FR4**: Reorganizar, rotacionar e deletar páginas do PDF
-- ✅ **FR5**: Selecionar múltiplos PDFs e uni-los em um único arquivo
-- ✅ **FR6**: Baixar o PDF resultante como um novo arquivo
+```bash
+npm run build && npm start
+```
 
-## 🏗️ Arquitetura
+## Como usar
 
-### Método BMAD (Business Model Analysis and Design)
+1. Faça upload de PDFs no sidebar.
+2. Aguarde as páginas aparecerem na grade **Páginas** e no visualizador.
+3. **Adicionar Texto** — clique na página; **Selecionar** — clique numa anotação para editar.
+4. Na grade de páginas: arraste para reordenar, rotacione ou exclua.
+5. Clique em **Baixar PDF** (header ou área principal) ou use **Ctrl+S**.
+6. Opcional: **Unir**, **Comprimir**, ou **Scanner & Extração** (OCR / Gemini).
 
-O projeto foi implementado seguindo o método BMAD com agentes especializados:
+## Privacidade e dados
 
-1. **Agente de Fundação**: Implementou a base da aplicação e visualização
-2. **Agente de Edição**: Desenvolveu as ferramentas de edição de conteúdo
-3. **Agente de Estrutura**: Criou as funcionalidades de manipulação de páginas
-4. **Agente de Serviços**: Implementou o PDFService com pdf-lib
+- Visualização, merge, compressão, anotações e OCR rodam **no navegador**.
+- A extração jurídica com Gemini envia o **texto extraído** para a API do Google quando a chave está configurada. Não use com documentos sigilosos sem autorização.
+- O fluxo Markdown via `/api/pdf-markdown-workflow` passa pelo servidor e hoje é em grande parte simulado.
 
-### Estrutura de Componentes
+## Estrutura principal
 
 ```
 src/
 ├── app/
-│   ├── globals.css          # Estilos globais
-│   ├── layout.tsx           # Layout principal
-│   └── page.tsx             # Página principal
+│   ├── page.tsx                 # Shell e orquestração de estado
+│   ├── api/extract-fields/      # Extração Gemini (+ fallback heurístico)
+│   └── api/pdf-markdown-workflow/
 ├── components/
-│   ├── FileUpload.tsx       # Upload de arquivos
-│   ├── FileViewer.tsx       # Visualizador de PDF
-│   ├── FileList.tsx         # Lista de páginas
-│   ├── Toolbox.tsx          # Barra de ferramentas
-│   └── TextEditor.tsx       # Editor de anotações
+│   ├── Sidebar.tsx              # Upload, ferramentas, merge/compress
+│   ├── FileViewer.tsx           # Viewer + anotações
+│   ├── FileList.tsx             # Reordenar / rotacionar / excluir
+│   └── ScannerExtractor.tsx     # OCR + metadados jurídicos
 └── lib/
-    ├── types.ts             # Definições de tipos
-    └── pdfService.ts        # Serviços de manipulação de PDF
+    ├── pdfService.ts            # Manipulação e export (pdf-lib)
+    └── types.ts
 ```
 
-## 🚀 Como Executar
+## Limitações conhecidas
 
-### Pré-requisitos
-- Node.js 18+ 
-- npm ou yarn
+- Compressão não re-encoda imagens em JPEG agressivo; ganho de tamanho limitado.
+- Mover páginas **entre** documentos diferentes no FileList não reescreve o `File` de origem até o export por documento — prefira reordenar dentro do mesmo PDF ou usar Unir + baixar.
+- Undo/redo (Ctrl+Z/Y) ainda não registra a maioria das ações.
+- Sem autenticação; não expor publicamente sem controle de acesso.
+- Documentação antiga em vários `*.md` da raiz pode estar desatualizada — este README é a fonte de verdade.
 
-### Instalação
-```bash
-npm install
-```
+## Licença
 
-### Desenvolvimento
-```bash
-npm run dev
-```
-
-### Build de Produção
-```bash
-npm run build
-npm start
-```
-
-## 📱 Como Usar
-
-1. **Upload**: Arraste e solte arquivos PDF ou clique para selecionar
-2. **Visualizar**: Navegue pelas páginas usando os controles
-3. **Editar**: 
-   - Selecione a ferramenta "Adicionar Texto"
-   - Clique em qualquer lugar da página para adicionar anotação
-   - Use "Selecionar" para editar anotações existentes
-4. **Manipular Páginas**:
-   - Arraste páginas para reordenar
-   - Use os botões de rotação e exclusão no hover
-5. **Exportar**: Clique em "Salvar e Baixar" para gerar o PDF final
-
-## 🔒 Segurança
-
-- Todo processamento ocorre no navegador (client-side)
-- Nenhum arquivo é enviado para servidores externos
-- Compatível com documentos sensíveis
-
-## 🌐 Compatibilidade
-
-- Google Chrome (versões recentes)
-- Mozilla Firefox (versões recentes)  
-- Microsoft Edge (versões recentes)
-- Design responsivo para desktop e mobile
-
-## 📄 Licença
-
-Projeto interno dos Correios - Uso restrito.
-
-## 👥 Desenvolvimento
-
-Implementado seguindo o método BMAD com agentes especializados para garantir:
-- Código modular e manutenível
-- Separação clara de responsabilidades
-- Implementação incremental das funcionalidades
-- Testes e validação contínua
-
----
-
-**Versão**: 1.0  
-**Data**: Janeiro 2025  
-**Status**: ✅ Implementação Completa
+Uso interno dos Correios — restrito.

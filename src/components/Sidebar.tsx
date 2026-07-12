@@ -39,48 +39,61 @@ export default function Sidebar({
   const [showMergeModal, setShowMergeModal] = useState(false);
   const [showCompressAndMergeModal, setShowCompressAndMergeModal] = useState(false);
 
-  const tools = [
-    { 
-      id: 'select', 
-      name: 'Selecionar', 
+  const tools: Array<{
+    id: string;
+    name: string;
+    icon: string;
+    description: string;
+    color: string;
+    available: boolean;
+  }> = [
+    {
+      id: 'select',
+      name: 'Selecionar',
       icon: 'M7 11.5V14m0-2.5v-6a1.5 1.5 0 113 0m-3 6a1.5 1.5 0 00-3 0v2a7.5 7.5 0 0015 0v-5a1.5 1.5 0 00-3 0m-6-3V11m0-5.5v-1a1.5 1.5 0 013 0v1m0 0V11m0-5.5a1.5 1.5 0 013 0v3m0 0V11',
       description: 'Selecionar e editar anotações',
-      color: 'text-blue-500'
+      color: 'text-blue-500',
+      available: true,
     },
-    { 
-      id: 'text', 
-      name: 'Adicionar Texto', 
+    {
+      id: 'text',
+      name: 'Adicionar Texto',
       icon: 'M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7M18 9l-4-4m0 0L8 9m6-4v12',
-      description: 'Adicionar nova anotação de texto',
-      color: 'text-green-500'
+      description: 'Clique na página para adicionar texto',
+      color: 'text-green-500',
+      available: true,
     },
-    { 
-      id: 'edit', 
-      name: 'Editar Texto', 
-      icon: 'M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z',
-      description: 'Editar texto existente no PDF',
-      color: 'text-purple-500'
-    },
-    { 
-      id: 'search-edit', 
-      name: 'Buscar e Editar', 
-      icon: 'M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z',
-      description: 'Buscar texto específico e editá-lo',
-      color: 'text-orange-500'
-    },
-    { 
-      id: 'analyze', 
-      name: 'Analisar PDF', 
-      icon: 'M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z',
-      description: 'Analisar estrutura do PDF',
-      color: 'text-red-500'
-    },
-    { 
-      id: 'scanner', 
-      name: 'Scanner & Extração', 
+    {
+      id: 'scanner',
+      name: 'Scanner & Extração',
       icon: 'M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z',
-      description: 'Scanner com OCR e extração jurídica via Gemini',
-      color: 'text-indigo-400'
+      description: 'OCR e extração jurídica (envia texto à API Gemini)',
+      color: 'text-indigo-400',
+      available: true,
+    },
+    {
+      id: 'edit',
+      name: 'Editar Texto Nativo',
+      icon: 'M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z',
+      description: 'Em breve — edição do texto embutido no PDF',
+      color: 'text-purple-500',
+      available: false,
+    },
+    {
+      id: 'search-edit',
+      name: 'Buscar e Editar',
+      icon: 'M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z',
+      description: 'Em breve — buscar e substituir no PDF',
+      color: 'text-orange-500',
+      available: false,
+    },
+    {
+      id: 'analyze',
+      name: 'Analisar PDF',
+      icon: 'M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z',
+      description: 'Em breve — análise estrutural',
+      color: 'text-red-500',
+      available: false,
     },
   ];
 
@@ -278,19 +291,38 @@ export default function Sidebar({
                 {tools.map((tool) => (
                   <button
                     key={tool.id}
+                    type="button"
+                    disabled={!tool.available}
                     className={`w-full flex items-center space-x-3 p-3 rounded-lg transition-all duration-200 ${
-                      currentTool === tool.id 
-                        ? 'bg-blue-600 text-white shadow-lg' 
-                        : 'text-gray-300 hover:bg-gray-700 hover:text-white'
+                      !tool.available
+                        ? 'text-gray-500 opacity-60 cursor-not-allowed'
+                        : currentTool === tool.id
+                          ? 'bg-blue-600 text-white shadow-lg'
+                          : 'text-gray-300 hover:bg-gray-700 hover:text-white'
                     }`}
-                    onClick={() => onToolChange(tool.id)}
+                    onClick={() => tool.available && onToolChange(tool.id)}
                     title={tool.description}
+                    aria-disabled={!tool.available}
                   >
-                    <svg className={`w-5 h-5 ${currentTool === tool.id ? 'text-white' : tool.color}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg
+                      className={`w-5 h-5 ${
+                        currentTool === tool.id && tool.available ? 'text-white' : tool.color
+                      }`}
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={tool.icon} />
                     </svg>
-                    <div className="text-left">
-                      <div className="font-medium">{tool.name}</div>
+                    <div className="text-left flex-1">
+                      <div className="font-medium flex items-center gap-2">
+                        {tool.name}
+                        {!tool.available && (
+                          <span className="text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded bg-gray-700 text-gray-300">
+                            Em breve
+                          </span>
+                        )}
+                      </div>
                       <div className="text-xs opacity-75">{tool.description}</div>
                     </div>
                   </button>
@@ -429,8 +461,8 @@ export default function Sidebar({
           {/* Footer do Sidebar */}
           <div className="p-4 border-t border-gray-700">
             <div className="text-xs text-gray-400 text-center">
-              <p>Fênix PDF v1.0</p>
-              <p>Editor Profissional</p>
+              <p>Fênix PDF v0.2</p>
+              <p>Ferramenta interna Correios</p>
             </div>
           </div>
         </div>

@@ -101,7 +101,9 @@ export default function Instructions({ documentsCount, selectedPageIndex }: Inst
             Página selecionada e pronta para edição
           </p>
           <p className="text-white/70 text-xs">
-            Use as ferramentas no sidebar para editar, adicionar texto ou analisar o PDF
+            Use <strong>Adicionar Texto</strong> / <strong>Selecionar</strong> no sidebar,
+            reordene páginas na grade acima e clique em <strong>Baixar PDF</strong> (ou Ctrl+S)
+            para exportar com suas alterações.
           </p>
         </div>
       </div>
